@@ -328,3 +328,37 @@ def prepare_data(path = "ibtracs.last3years.list.v04r00.csv", max_wind_change = 
     #replace 0 by latest values in the tensor
     t3 = repad(t3)
     return t3, p_list
+
+
+def prepare_data2(path = "ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
+    data = pd.read_csv(path) 
+    #select interesting columns
+    df0 = select_data(data)
+    #transform data from String to numeric
+    df0 = numeric_data(df0)
+    #if dropna: df0 = df0.dropna()
+    #add one_hot columns:
+    if one_hot: 
+        #add one-hot storm category
+        #df0 = add_storm_category_val(df0)   
+        df0 = add_storm_category_one_hot(df0)
+        #transform basin and nature of the storm into one-hot vector
+        df0 = add_one_hot(data, df0)
+    if secondary: 
+        #add the max-wind-change column
+        df0 = get_max_wind_change(df0, max_wind_change)
+    
+    #get a dict with the storms with a windspeed greater to a threshold
+    storms = sort_storm(df0, min_wind, min_steps)
+    #pad the trajectories to a fix length
+    d = pad_traj(storms, max_steps)
+    #print(d)
+    if secondary:
+        #d = add_displacement_distance(d)
+        d = add_displacement_lat_lon2(d)
+    #print the shape of the tensor
+    m, n, t_max, t_min, t_hist = tensor_shape(d)
+    #create the tensor
+    t, p_list = create_tensor(d, m)
+    return t[:,2:5,:]
+
