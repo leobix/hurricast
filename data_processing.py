@@ -1,13 +1,10 @@
 from __future__ import print_function
 import pandas as pd 
-import numpy as np
-import matplotlib.pyplot as plt
-import torch
+
 import math
 
 import torch
 import numpy as np
-import torch.nn.functional as F
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -289,7 +286,7 @@ def repad(t):
 
 
 
-def prepare_data(path = "ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
+def prepare_data(path = "/data/ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
     data = pd.read_csv(path) 
     #select interesting columns
     df0 = select_data(data)
@@ -330,7 +327,7 @@ def prepare_data(path = "ibtracs.last3years.list.v04r00.csv", max_wind_change = 
     return t3, p_list
 
 
-def prepare_data2(path = "ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
+def prepare_data2(path = "./data/ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
     data = pd.read_csv(path) 
     #select interesting columns
     df0 = select_data(data)
@@ -361,4 +358,35 @@ def prepare_data2(path = "ibtracs.last3years.list.v04r00.csv", max_wind_change =
     #create the tensor
     t, p_list = create_tensor(d, m)
     return t[:,2:5,:]
+
+
+def prepare_tabular_data_vision(path="./data/ibtracs.last3years.list.v04r00.csv", min_wind=50, min_steps=15,
+                  max_steps=120, get_displacement=True):
+    data = pd.read_csv(path)
+    # select interesting columns
+    df0 = select_data(data)
+    # transform data from String to numeric
+    df0 = numeric_data(df0)
+    df0 = df0[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES']]
+
+    # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
+    storms = sort_storm(df0, min_wind, min_steps)
+    # pad the trajectories to a fix length
+    d = pad_traj(storms, max_steps)
+    # print(d)
+    if get_displacement:
+        d = add_displacement_lat_lon2(d)
+    # print the shape of the tensor
+    m, n, t_max, t_min, t_hist = tensor_shape(d)
+    # create the tensor
+    t, p_list = create_tensor(d, m)
+
+    #put t in format storm * timestep * features
+    e = t.transpose((2, 0, 1))
+    for tt in e:
+        try:
+            tt[0] = datetime.strptime(tt[0], "%Y-%m-%d %H:%M:%S")
+        except:
+            pass
+    return e[:, :, 1:], d
 
