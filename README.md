@@ -8,7 +8,13 @@ This is the repository for Hurricast Project.
 - Be sure it is named: geopotential_u_component_of_wind_v_component_of_wind
 
 ## Structure 
--utils
+- (NEW) run.py
+- utils/
+  - utils_vision_data.py
+  - data_processing.py	
+  - (NEW) models.py	
+  - (NEW) plot.py	
+
   
 
 
