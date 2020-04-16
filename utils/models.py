@@ -249,7 +249,7 @@ class ENCDEC(nn.Module):
     def forward_rec(self, x, hidden):    
         out_prev = x
         out_hidden = []
-        for hidden_tensor, rec_cell in zip(self.decoder_cells, hidden):
+        for rec_cell, hidden_tensor in zip(self.decoder_cells, hidden):
             out_prev = rec_cell(out_prev, hidden_tensor)
             out_hidden.append(out_prev) 
         return out_prev, out_hidden
@@ -267,13 +267,10 @@ class ENCDEC(nn.Module):
         outputs = []
         #List of zeros tensors
         for t in range(x_img.size(1)):
-            print(t)
-            u = torch.select_index(x_img, axis=1, index=t)
-            print(u.size())
-            x = self.encoder(torch.select_index(x_img, axis=1, index=t))
+            x = self.encoder(torch.select(x_img, axis=1, index=t))
             out, hidden = self.forward_rec(x, hidden)
-            outputs.append(hidden)
-        return torch.stack(outputs)
+            outputs.append(out)
+        return torch.stack(outputs).transpose(1,0)
 
 
     def init_hidden(self, bs):
