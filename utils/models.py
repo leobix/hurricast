@@ -7,7 +7,7 @@ import math
 
 #===========================================
 # Encoders
-#V0
+# V0
 class EncoderCNN(nn.Module):
     """
     #TODO: Ask whether to use dropout / Remove from args ?
@@ -58,89 +58,6 @@ class EncoderCNN(nn.Module):
         x = x.view(1, -1)
         return x
 
-#V1
-class CNNEncoder(nn.Module):
-
-    def __init__(self, 
-                n_in, 
-                n_out, 
-                hidden_configuration,
-                kernel_size=3,
-                stride=1, 
-                padding=0,
-                groups=1, 
-                pool_kernel_size=2, 
-                pool_stride=2, 
-                pool_padding=0, 
-                activation=nn.ReLU()):
-        super(CNNEncoder, self).__init__()
-        self.n_in = n_in
-        self.n_out = n_out
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-        self.groups = groups
-        self.pool_kernel_size = pool_kernel_size
-        self.pool_stride = pool_stride
-        self.pool_padding = pool_padding
-        self.activation = activation
-        assert isinstance(hidden_configuration, tuple)
-        self.hidden_configuration = hidden_configuration
-        self.layers = self.create_cells()
-
-    def create_vision_cell(self, n_in, n_out):
-        cell = [ nn.Conv2d(in_channels=n_in, 
-                            out_channels=n_out,
-                            kernel_size=self.kernel_size, 
-                            stride=self.stride, 
-                            padding=self.padding, 
-                            groups=self.groups, 
-                            bias=True), 
-                nn.BatchNorm2d(n_out), 
-                self.activation ]
-        return cell
-
-    def create_linear_cell(self, n_in, n_out):
-        cell = [ nn.Linear(in_features=n_in, out_features=n_out), 
-                nn.BatchNorm1d(n_out), 
-                self.activation]
-        return cell
-
-    def create_maxpool_cell(self, n_in, n_out):
-        """
-        n_in, n_out are not used here.
-        """
-        cell = [nn.MaxPool2d(kernel_size=self.pool_kernel_size, 
-                        stride=self.pool_stride, 
-                        padding=self.pool_padding)]
-        return cell
-    
-    def create_cells(self):
-        cells = {
-            'linear': self.create_linear_cell, 
-            'conv': self.create_vision_cell, 
-            'maxpool': self.create_maxpool_cell,
-            'fc': lambda n_in, n_out: [nn.Linear(n_in, n_out)]
-            }
-        layers = []
-        n_prev = self.n_in
-        for cell_type, hidden_out in self.hidden_configuration:
-            layers.extend(cells[cell_type](n_prev, hidden_out))
-            if hidden_out is not None:
-                n_prev = hidden_out
-        
-        assert n_prev == self.n_out #Make sure the last layer is correct 
-        #We can remove that actually
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        #TODO: Neew to reshape or something ?
-        return self.layers(x)
-
-    def init(self):
-        #TODO: Ask whether we need to create some init. methods really?
-        return NotImplementedError
-
 #V0
 class EncoderLinear1(nn.Module):
     """
@@ -182,7 +99,6 @@ class EncoderLinear1(nn.Module):
         x = self.fc4(x)
         return x
 
-
 #V0
 class EncoderCNNLinear1(nn.Module):
     """#TODO: Ask whether to use dropout / Remove from args ?
@@ -200,7 +116,171 @@ class EncoderCNNLinear1(nn.Module):
         x = self.linear(x)
         return x
 
-#===========================================
+#==========================
+# New versions of our layers
+class CNNEncoder(nn.Module):
+    """
+    CNNEncoder class
+    param: n_in
+    param: n_out 
+    param: hidden_configuration 
+        Tuple of tuples to set the configuration of the net.
+    Ex:
+        >>> config = (
+            ('conv', 64), 
+            ('conv', 64), 
+            ('maxpool', None),
+            ('conv', 256),
+            ('maxpool', None),
+            ('flatten', 256*4*4),
+            ('linear', 256), 
+            ('fc', 10) )
+        >>> model = CNNEncoder(n_in=9, n_out=10, hidden_config=config)
+    """
+    def __init__(self,
+                 n_in,
+                 n_out,
+                 hidden_configuration,
+                 kernel_size=3,
+                 stride=1,
+                 padding=0,
+                 groups=1,
+                 pool_kernel_size=2,
+                 pool_stride=2,
+                 pool_padding=0,
+                 activation=nn.ReLU()):
+        super(CNNEncoder, self).__init__()
+        self.n_in = n_in
+        self.n_out = n_out
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.groups = groups
+        self.pool_kernel_size = pool_kernel_size
+        self.pool_stride = pool_stride
+        self.pool_padding = pool_padding
+        self.activation = activation
+        assert isinstance(hidden_configuration, tuple)
+        self.hidden_configuration = hidden_configuration
+        self.layers = self.create_cells()
+
+    def create_vision_cell(self, n_in, n_out):
+        cell = [nn.Conv2d(in_channels=n_in,
+                          out_channels=n_out,
+                          kernel_size=self.kernel_size,
+                          stride=self.stride,
+                          padding=self.padding,
+                          groups=self.groups,
+                          bias=True),
+                nn.BatchNorm2d(n_out),
+                self.activation]
+        return cell
+
+    def create_linear_cell(self, n_in, n_out):
+        cell = [nn.Linear(in_features=n_in, out_features=n_out),
+                nn.BatchNorm1d(n_out),
+                self.activation]
+        return cell
+
+    def create_maxpool_cell(self, n_in, n_out):
+        """
+        n_in, n_out are not used here.
+        """
+        cell = [nn.MaxPool2d(kernel_size=self.pool_kernel_size,
+                             stride=self.pool_stride,
+                             padding=self.pool_padding)]
+        return cell
+
+    def create_cells(self):
+        cells = {
+            'linear': self.create_linear_cell,
+            'conv': self.create_vision_cell,
+            'maxpool': self.create_maxpool_cell,
+            'fc': lambda n_in, n_out: [nn.Linear(n_in, n_out)],
+            'flatten': lambda n_in, n_out: [nn.Flatten()]
+        }
+        layers = []
+        n_prev = self.n_in
+        for cell_type, hidden_out in self.hidden_configuration:
+            layers.extend(cells[cell_type](n_prev, hidden_out))
+            if hidden_out is not None:
+                n_prev = hidden_out
+        assert n_prev == self.n_out  # Make sure the last layer is correct
+        #We can remove that actually
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        #TODO: Neew to reshape or something ?
+        return self.layers(x)
+
+    def init_weights(self):
+        #TODO: Ask whether we need to create some init. methods really?
+        return NotImplementedError
+
+
+class ENCDEC(nn.Module):
+    #TODO: Make sure we can apply the CNN before feeding all of it 
+    #to the RNN --> I'm affraid we may not backprop correctly. Make sure that works
+
+    def __init__(self, 
+                encoder, 
+                n_in_decoder: int, 
+                n_out_decoder: int,
+                hidden_configuration_decoder: tuple):
+        super(ENCDEC, self).__init__()
+        self.encoder = encoder
+        
+        self.n_in_decoder = n_in_decoder
+        self.n_out_decoder = n_out_decoder
+        self.hidden_config = hidden_configuration_decoder
+        self.decoder_cells = self.create_rec_cells()
+
+    def create_rec_cells(self):
+        #Does not work with LSTM for now
+        cells = { 'gru': nn.GRUCell,
+                'lstm':nn.LSTMCell, 
+                'rnn':nn.RNNCell }
+        layers = []
+        n_prev = self.n_in_decoder
+        for cell_type, hidden_out in self.hidden_config:
+            layers.append(cells[cell_type](n_prev, hidden_out))
+        return layers
+
+    def forward_rec(self, x, hidden):    
+        out_prev = x
+        out_hidden = []
+        for hidden_tensor, rec_cell in zip(self.decoder_cells, hidden):
+            out_prev = rec_cell(out_prev, hidden_tensor)
+            out_hidden.append(out_prev) 
+        return out_prev, out_hidden
+
+    def forward(self, x_img, x_stat=None, predict_at=8):
+        """
+        x_img: bs, timesteps
+        x_stat: bs, timesteps, ....
+        """
+        bs = x_img.size(0) #batch_size to init the hidden layers
+        hidden = self.init_hidden(bs)
+        #list(map(
+        #        lambda n: torch.zeros(bs, n), 
+        #        lambdaself.hidden_config))
+        outputs = []
+        #List of zeros tensors
+        for t in range(x_img.size(1)):
+            print(t)
+            u = torch.select_index(x_img, axis=1, index=t)
+            print(u.size())
+            x = self.encoder(torch.select_index(x_img, axis=1, index=t))
+            out, hidden = self.forward_rec(x, hidden)
+            outputs.append(hidden)
+        return torch.stack(outputs)
+
+
+    def init_hidden(self, bs):
+        hidden_dims = list(map(lambda x: getattr(x, 'hidden_size') ,  self.decoder_cells))
+        hidden = [torch.zeros(bs, dim) for dim in hidden_dims]
+        return hidden
+# ====================
 # Decoders
 class DecoderGRU(nn.Module):
     """
