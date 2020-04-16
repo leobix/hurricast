@@ -244,6 +244,7 @@ class ENCDEC(nn.Module):
         n_prev = self.n_in_decoder
         for cell_type, hidden_out in self.hidden_config:
             layers.append(cells[cell_type](n_prev, hidden_out))
+            n_prev = hidden_out
         return layers
 
     def forward_rec(self, x, hidden):    
@@ -254,7 +255,7 @@ class ENCDEC(nn.Module):
             out_hidden.append(out_prev) 
         return out_prev, out_hidden
 
-    def forward(self, x_img, x_stat=None, predict_at=8):
+    def forward(self, x_img, x_stat, predict_at=8):
         """
         x_img: bs, timesteps
         x_stat: bs, timesteps, ....
@@ -268,6 +269,9 @@ class ENCDEC(nn.Module):
         #List of zeros tensors
         for t in range(x_img.size(1)):
             x = self.encoder(torch.select(x_img, axis=1, index=t))
+            #FUSION
+            x = torch.cat([x, torch.select(x_stat, axis=1, index=t)], 
+                            axis=1)
             out, hidden = self.forward_rec(x, hidden)
             outputs.append(out)
         return torch.stack(outputs).transpose(1,0)
