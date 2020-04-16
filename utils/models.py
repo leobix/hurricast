@@ -3,9 +3,11 @@ Gather models for hurricane prediction.
 """
 import torch
 import torch.nn as nn 
+import math
 
 #===========================================
 # Encoders
+#V0
 class EncoderCNN(nn.Module):
     """
     #TODO: Ask whether to use dropout / Remove from args ?
@@ -56,7 +58,90 @@ class EncoderCNN(nn.Module):
         x = x.view(1, -1)
         return x
 
+#V1
+class CNNEncoder(nn.Module):
 
+    def __init__(self, 
+                n_in, 
+                n_out, 
+                hidden_configuration,
+                kernel_size=3,
+                stride=1, 
+                padding=0,
+                groups=1, 
+                pool_kernel_size=2, 
+                pool_stride=2, 
+                pool_padding=0, 
+                activation=nn.ReLU()):
+        super(CNNEncoder, self).__init__()
+        self.n_in = n_in
+        self.n_out = n_out
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.groups = groups
+        self.pool_kernel_size = pool_kernel_size
+        self.pool_stride = pool_stride
+        self.pool_padding = pool_padding
+        self.activation = activation
+        assert isinstance(hidden_configuration, tuple)
+        self.hidden_configuration = hidden_configuration
+        self.layers = self.create_cells()
+
+    def create_vision_cell(self, n_in, n_out):
+        cell = [ nn.Conv2d(in_channels=n_in, 
+                            out_channels=n_out,
+                            kernel_size=self.kernel_size, 
+                            stride=self.stride, 
+                            padding=self.padding, 
+                            groups=self.groups, 
+                            bias=True), 
+                nn.BatchNorm2d(n_out), 
+                self.activation ]
+        return cell
+
+    def create_linear_cell(self, n_in, n_out):
+        cell = [ nn.Linear(in_features=n_in, out_features=n_out), 
+                nn.BatchNorm1d(n_out), 
+                self.activation]
+        return cell
+
+    def create_maxpool_cell(self, n_in, n_out):
+        """
+        n_in, n_out are not used here.
+        """
+        cell = [nn.MaxPool2d(kernel_size=self.pool_kernel_size, 
+                        stride=self.pool_stride, 
+                        padding=self.pool_padding)]
+        return cell
+    
+    def create_cells(self):
+        cells = {
+            'linear': self.create_linear_cell, 
+            'conv': self.create_vision_cell, 
+            'maxpool': self.create_maxpool_cell,
+            'fc': lambda n_in, n_out: [nn.Linear(n_in, n_out)]
+            }
+        layers = []
+        n_prev = self.n_in
+        for cell_type, hidden_out in self.hidden_configuration:
+            layers.extend(cells[cell_type](n_prev, hidden_out))
+            if hidden_out is not None:
+                n_prev = hidden_out
+        
+        assert n_prev == self.n_out #Make sure the last layer is correct 
+        #We can remove that actually
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        #TODO: Neew to reshape or something ?
+        return self.layers(x)
+
+    def init(self):
+        #TODO: Ask whether we need to create some init. methods really?
+        return NotImplementedError
+
+#V0
 class EncoderLinear1(nn.Module):
     """
     IN:
@@ -98,6 +183,7 @@ class EncoderLinear1(nn.Module):
         return x
 
 
+#V0
 class EncoderCNNLinear1(nn.Module):
     """#TODO: Ask whether to use dropout / Remove from args ?
     IN:
@@ -141,7 +227,7 @@ class DecoderGRU(nn.Module):
 
 class EncoderDecoder(nn.Module):
     """
-    #TODO: Write smmall doc.
+    #TODO: Write small doc.
     """
     def __init__(self, 
                 input_size, 
