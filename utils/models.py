@@ -221,31 +221,40 @@ class CNNEncoder(nn.Module):
 class ENCDEC(nn.Module):
     #TODO: Make sure we can apply the CNN before feeding all of it 
     #to the RNN --> I'm affraid we may not backprop correctly. Make sure that works
+    """
+    The output is just the very last hidden for now.
+    """
 
     def __init__(self, 
                 encoder, 
                 n_in_decoder: int, 
                 n_out_decoder: int,
-                hidden_configuration_decoder: tuple):
+                hidden_configuration_decoder: tuple, 
+                window_size: int):
         super(ENCDEC, self).__init__()
         self.encoder = encoder
         
         self.n_in_decoder = n_in_decoder
         self.n_out_decoder = n_out_decoder
         self.hidden_config = hidden_configuration_decoder
-        self.decoder_cells = self.create_rec_cells()
+        self.window_size = window_size
+        self.decoder_cells, \
+            self.last_linear = self.create_rec_cells()
 
     def create_rec_cells(self):
         #Does not work with LSTM for now
         cells = { 'gru': nn.GRUCell,
                 'lstm':nn.LSTMCell, 
                 'rnn':nn.RNNCell }
-        layers = []
+        rec_layers = []
         n_prev = self.n_in_decoder
         for cell_type, hidden_out in self.hidden_config:
-            layers.append(cells[cell_type](n_prev, hidden_out))
+            rec_layers.append(cells[cell_type](n_prev, hidden_out))
             n_prev = hidden_out
-        return layers
+        #Create the last linear as well:
+        last_linear = nn.Linear(in_features=hidden_out*self.window_size,
+                                out_features=self.n_out_decoder)
+        return nn.Sequential(*rec_layers), last_linear
 
     def forward_rec(self, x, hidden):    
         out_prev = x
@@ -274,7 +283,11 @@ class ENCDEC(nn.Module):
                             axis=1)
             out, hidden = self.forward_rec(x, hidden)
             outputs.append(out)
-        return torch.stack(outputs).transpose(1,0)
+        outputs = torch.stack(outputs).transpose(1, 0) 
+        
+        #Final transformation
+        outputs = self.last_linear(outputs.flatten(start_dim=1))
+        return outputs
 
 
     def init_hidden(self, bs):
