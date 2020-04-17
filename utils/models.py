@@ -4,6 +4,7 @@ Gather models for hurricane prediction.
 import torch
 import torch.nn as nn 
 import math
+import warnings
 
 #===========================================
 # Encoders
@@ -561,5 +562,65 @@ class ENCDEC(nn.Module):
         hidden = [torch.zeros(bs, dim) for dim in hidden_dims]
         return hidden
 
+
+class TRANSFORMER(nn.Module):
+    """
+
+    """
+    def __init__(self, 
+                encoder, 
+                d_model, 
+                n_head, 
+                n_transformer_layer):
+        super(TRANSFORMER, self).__init__()
+        warnings.warn('Using a Transformer model without positional encoding', 
+                UserWarning)
+        self.encodercnn = encoder
+        self.d_model = d_model
+        self.n_head = n_head
+        self.n_transformer_layer = n_head
+        self.transformer_layers = self.create_layers()
+        assert hasattr(self, 'encodercnn')
+    
+    def create_layers(self):
+        layers = [self.encodercnn]
+        layers.extend([nn.TransformerEncoderLayer(
+                                d_model=self.d_model, 
+                                nhead=self.n_head)] 
+                                * self.n_transformer_layer)
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        #Naive way
+        out = []
+        for x_ in x.unbind(1): #Loop over the sequence
+            out.append(self.encodercnn(x_))
+        out = torch.stack(out).transpose(0, 1)
+        return out#self.transformer_layers(out)
 #Shortcuts
 
+if __name__ == "__main__":
+    encoder_config = (
+        ('conv', 64),
+        ('conv', 64),
+        ('maxpool', None),
+        ('conv', 256),
+        ('maxpool', None),
+        ('flatten', 256 * 4 * 4),
+        ('linear', 512)
+    )
+    encoder = CNNEncoder(n_in=9,
+                 n_out=512,
+                 hidden_configuration=encoder_config)
+    x = torch.randn(10,9,25,25)
+    print(x.size())
+    out = encoder(x)
+    print(out.size())
+
+    transfo = TRANSFORMER(encoder, 
+                d_model=512, 
+                n_head=4, 
+                n_transformer_layer=3)
+    x = torch.randn(10,8, 9,25,25)
+    out = transfo(x)
+    print(out.size())
