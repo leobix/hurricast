@@ -4,9 +4,10 @@ import torch
 from torch.utils import data
 import numpy as np
 import argparse
-from utils import utils_vision_data, data_processing, plot
+from utils import utils_vision_data, data_processing, plot, models
 import matplotlib.pyplot as plt
 import tqdm
+import os 
 
 class Prepro:
     """
@@ -185,32 +186,77 @@ def train(model,
     return model, optimizer, training_loss
 
 
-def run_pipeline():
+def main():
     min_wind = 50
     min_steps = 20
     max_steps = 60
+    window_size = 8
+    predict_at = 8
+    batch_size = 10
     #Load data
     data = utils_vision_data.get_storms(min_wind=min_wind, min_steps=min_steps, max_steps=max_steps,
                                         extraction=True, path='./data/ibtracs.last3years.list.v04r00.csv')
+    #Create a dictionary to save the results
+    try:
+        os.mkdir('results')
+        path_to_results = './results'
+    except Exception as e:
+        print("Couldnt' create a results folder because of", e)
+    
 
     #y represents the actual target data we are going to use
     y, _ = data_processing.prepare_tabular_data_vision(
         min_wind=min_wind, min_steps=min_steps, max_steps=max_steps)
     #Then we get their corresponding vision maps
     vision_data = utils_vision_data.extract_vision(data, epsilon=0.05)
+    #Plot one of the series
     animation = plot.animate_ouragan(vision_data, n=0)
     plt.show()
-    
-    train_data = HurricaneDS(vision_data, y)
-    loader = torch.utils.data.DataLoader(train_data, batch_size=10, shuffle=True)
-    data_ = next(iter(loader))
-    
-    for key, value in data_.items():
+    # Preprocess the data. Make a tensor dataset + loader
+    train_data = Prepro.process(vision_data, y, predict_at=predict_at, window_size=window_size)
+    for key, value in train_data.items():
         print(key, value.size())
     
+    train_ds = torch.utils.data.TensorDataset(*train_data.values())
+    train_loader = torch.utils.data.DataLoader(train_ds, 
+                                            batch_size=batch_size, 
+                                            shuffle=True)
+    # Create model
+    encoder_config = models.encoder_config #Load pre-defined config
+    decoder_config = models.decoder_config 
+    encoder = models.CNNEncoder(n_in=3*3,
+                                n_out=128,
+                                hidden_configuration=encoder_config)
+    #n_in decoder must be out encoder + 7!
+    model = models.ENCDEC(n_in_decoder=128+7, 
+                               n_out_decoder=2, 
+                               encoder=encoder, 
+                               hidden_configuration_decoder=decoder_config, 
+                                window_size=window_size)
+
+    print("USING MODEL", model)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    model, optimizer, loss = train(model,
+                               optimizer=optimizer,
+                                loss_fn=torch.nn.MSELoss(),
+                               n_epochs=10,
+                               train_loader=train_loader,
+                               args={},
+                               scheduler=None,
+                               l2_reg=0.)
+    plt.plot(loss)
+    plt.show()
+    #Sve results
+    #with open(path_to_results, 'w') as writer:
+    torch.save(model, path_to_results+'/model.pt')
 
 if __name__ == "__main__":
-    run_pipeline()
+    #try:
+    #import argparse
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument('--results_di', default=16, help='Size of the training batch')
+    #parser.
+    main()
 
 
 
