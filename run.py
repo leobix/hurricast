@@ -316,8 +316,8 @@ def main(args):
     train_ds = TensorDataset(*train_tensors)
     test_ds = TensorDataset(*test_tensors)
 
-    train_loader = DataLoader(train_ds, batch_size=10, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_ds, batch_size=10, shuffle=False)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size=, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
 
     # Create model
     encoder_config = setup.encoder_config #Load pre-defined config
