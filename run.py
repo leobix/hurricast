@@ -352,7 +352,7 @@ def main(args):
     plt.show()
     #Sve results
     #with open(path_to_results, 'w') as writer:
-    torch.save(model, osp.join(args.output_dir, 'final_model.path'))
+    torch.save(model, osp.join(args.output_dir, 'final_model.pt'))
 
 if __name__ == "__main__":
     import setup
