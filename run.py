@@ -208,7 +208,7 @@ def eval(model,
     # train model
     total_loss = 0.
     total_n_eval = 0.
-    loop = tqdm.tqdm(train_loader, desc='Evaluation')
+    loop = tqdm.tqdm(test_loader, desc='Evaluation')
     for data_batch in loop:
         #Put data on GPU
         data_batch = tuple(map(lambda x: x.to(device), 
@@ -316,7 +316,7 @@ def main(args):
     train_ds = TensorDataset(*train_tensors)
     test_ds = TensorDataset(*test_tensors)
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size=, shuffle=True)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True)
     test_loader = torch.utils.data.DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
 
     # Create model
@@ -357,7 +357,7 @@ def main(args):
 if __name__ == "__main__":
     import setup
     args = setup.create_setup()
-    main(args)
+    #main(args)
 
     
 
