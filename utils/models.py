@@ -1,5 +1,7 @@
 """
 Gather models for hurricane prediction.
+Check whether we want to have our own version of attention layers.
+https://medium.com/huggingface/understanding-emotions-from-keras-to-pytorch-3ccb61d5a983
 """
 import torch
 import torch.nn as nn 
@@ -597,7 +599,30 @@ class TRANSFORMER(nn.Module):
             out.append(self.encodercnn(x_))
         out = torch.stack(out).transpose(0, 1)
         return out#self.transformer_layers(out)
-#Shortcuts
+
+
+class LINEARTransform(torch.nn.Module):
+    """
+    Simple Net used to debug.
+    """
+    def __init__(self, encoder):
+        super(LINEARTransform, self).__init__()
+        self.encoder = encoder
+        self.linear = torch.nn.Linear(128 *8, 128)
+        self.activation = torch.nn.ReLU()
+        self.predictor = torch.nn.Linear(128, 2)
+    
+    def forward(self, x_viz, x_stat):
+        #Apply the econder to all the elements 
+        out_enc = list(map(self.encoder, x_viz.unbind(1)))
+        out_enc = torch.stack(out_enc).transpose(0,1) #keep batch first
+        #Flatten before passing through the linear layer
+        out_enc = out_enc.flatten(start_dim=1)
+        out_enc = self.linear(out_enc)
+        out_enc = self.activation(out_enc)
+        out_enc = self.predictor(out_enc)
+        return out_enc
+
 
 if __name__ == "__main__":
     encoder_config = (
