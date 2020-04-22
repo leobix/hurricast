@@ -232,8 +232,13 @@ def add_displacement_lat_lon2(dict0):
         lst_lat = [0]
         lst_lon = [0]
         for j in range(1,len(df)):
-            d_lat = df['LAT'][j] - df['LAT'][j-1]
-            d_lon = df['LON'][j] - df['LON'][j-1]
+            lat_j, lon_j = df['LAT'][j], df['LON'][j]
+            if lat_j==0 and lon_j == 0:
+                d_lat = 0
+                d_lon = 0
+            else:
+                d_lat = df['LAT'][j] - df['LAT'][j-1]
+                d_lon = df['LON'][j] - df['LON'][j-1]
             lst_lat.append(d_lat)
             lst_lon.append(d_lon)
         df['DISPLACEMENT_LAT'] = lst_lat
