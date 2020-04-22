@@ -28,7 +28,7 @@ def process_netcdf(filepath, param):
     return grid
 
 
-def get_storms(extraction = False, min_wind = 30, min_steps= 20, max_steps=60, path = "ibtracs.since1980.list.v04r00.csv"):
+def get_storms(extraction = False, min_wind = 30, min_steps= 20, max_steps=60, path = "since1980.csv"):
     '''
     returns an array of elements of type [datetime, lat, lon]
     set extraction to True if used for downloading data and False if used to convert netcdf files to tensor
