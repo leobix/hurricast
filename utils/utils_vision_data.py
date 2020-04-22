@@ -56,6 +56,7 @@ def get_timestep_vision(time, lat, lon):
     u, v, z = process_netcdf(filepath, 'u'), process_netcdf(filepath, 'v'), process_netcdf(filepath, 'z')
     return np.array([u, v, z])
 
+
 def get_storm_vision(storm, epsilon = 0):
     '''
     given a storm (list of timesteps with time and lat/lon), returns the vision array
@@ -102,6 +103,8 @@ def get_filename(pressure, params, time, lat, lon):
     pressure_str = '_'.join(map(str, pressure))
     year, month, day, hour = str(time.year), str(time.month), str(time.day), str(time.hour)
     return 'data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
+
+
 
 def get_area(lat, lon, grid_size, e = 0.008):
     '''
