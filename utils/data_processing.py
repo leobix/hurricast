@@ -291,7 +291,7 @@ def repad(t):
 
 
 
-def prepare_data(path = "/data/ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
+def prepare_data(path = "/data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
     data = pd.read_csv(path) 
     #select interesting columns
     df0 = select_data(data)
@@ -332,7 +332,7 @@ def prepare_data(path = "/data/ibtracs.last3years.list.v04r00.csv", max_wind_cha
     return t3, p_list
 
 
-def prepare_data2(path = "./data/ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
+def prepare_data2(path = "./data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
     data = pd.read_csv(path) 
     #select interesting columns
     df0 = select_data(data)
@@ -365,7 +365,7 @@ def prepare_data2(path = "./data/ibtracs.last3years.list.v04r00.csv", max_wind_c
     return t[:,2:5,:]
 
 
-def prepare_tabular_data_vision(path="./data/ibtracs.last3years.list.v04r00.csv", min_wind=50, min_steps=15,
+def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_steps=15,
                   max_steps=120, get_displacement=True):
     data = pd.read_csv(path)
     # select interesting columns

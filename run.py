@@ -302,7 +302,7 @@ def main(args):
     y = np.load(osp.join(args.data_dir, args.y_name), allow_pickle = True)
     
     #y, _ = data_processing.prepare_tabular_data_vision(
-    #        path=osp.join(args.data_dir, "ibtracs.last3years.list.v04r00.csv"), 
+    #        path=osp.join(args.data_dir, "last3years.csv"),
     #        min_wind=args.min_wind, 
     #        min_steps=args.min_steps,
     #        max_steps=args.max_steps, 
