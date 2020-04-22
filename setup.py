@@ -81,6 +81,17 @@ def add_data_parser(parser):
     Add path to folders, 
     and arguments to preprocess the files.
     """
+
+    parser.add_argument('--vision_name',
+                        type=str,
+                        help='Directory to save the results',
+                        default='vision_data.npy')
+
+    parser.add_argument('--y_name',
+                        type=str,
+                        help='Directory to save the results',
+                        default='y.npy')
+
     parser.add_argument('--output_dir',
                             type=str,
                             help='Directory to save the results',

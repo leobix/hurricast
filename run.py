@@ -280,10 +280,10 @@ def train(model,
                                 loss_fn=loss_fn,
                                 test_loader=test_loader,
                                 device=device)
-
-        if eval_loss_sample < previous_best:
-            previous_best = eval_loss_sample
-            torch.save(model, osp.join(args.output_dir, 'best_model.pt'))
+        #@Theo TODO I commented because it was bugging.
+        #if eval_loss_sample < previous_best:
+            #previous_best = eval_loss_sample
+            #torch.save(model, osp.join(args.output_dir, 'best_model.pt'))
     
         model.train()
         loop.set_description('Epoch {} | Loss {}'.format(epoch,
@@ -298,8 +298,8 @@ def main(args):
         f'cuda:{args.gpu_nb}' if torch.cuda.is_available() and args.gpu_nb !=-1 else 'cpu')
     print(' Prepare the training using ', device)
     #Load files and reformat.
-    vision_data = torch.load(osp.join(args.data_dir, 'vision_data.pt')) #NUMPY ARRAY
-    y = torch.load(osp.join(args.data_dir, 'y.pt'))
+    vision_data = np.load(osp.join(args.data_dir, args.vision_name), allow_pickle = True) #NUMPY ARRAY
+    y = np.load(osp.join(args.data_dir, args.y_name), allow_pickle = True)
     
     #y, _ = data_processing.prepare_tabular_data_vision(
     #        path=osp.join(args.data_dir, "ibtracs.last3years.list.v04r00.csv"), 
@@ -357,7 +357,7 @@ def main(args):
 if __name__ == "__main__":
     import setup
     args = setup.create_setup()
-    #main(args)
+    main(args)
 
     
 
