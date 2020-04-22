@@ -608,7 +608,7 @@ class LINEARTransform(torch.nn.Module):
     def __init__(self, encoder):
         super(LINEARTransform, self).__init__()
         self.encoder = encoder
-        self.linear = torch.nn.Linear(128 *8, 128)
+        self.linear = torch.nn.Linear(128 * 8, 128)
         self.activation = torch.nn.ReLU()
         self.predictor = torch.nn.Linear(128, 2)
     

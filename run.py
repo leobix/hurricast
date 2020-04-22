@@ -98,7 +98,7 @@ class Prepro:
         m = torch.mean(
             X_vision.flatten(end_dim=1), 
                         axis=(0,-2,-1)).view(1, 1, 9, 1, 1)
-        s = torch.mean(
+        s = torch.std(
             X_vision.flatten(end_dim=1), 
             axis=(0, -2, -1)).view(1, 1, 9, 1, 1)
         return m,s
