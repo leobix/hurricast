@@ -609,12 +609,13 @@ class LINEARTransform(torch.nn.Module):
         super(LINEARTransform, self).__init__()
         self.encoder = encoder
         self.linear = torch.nn.Linear(128 * 8, 128)
-        self.activation = torch.nn.ReLU()
         self.target_intensity = target_intensity
         if self.target_intensity:
             self.predictor = torch.nn.Linear(128, 1)
+            self.activation = torch.nn.LeakyReLU(negative_slope=0.01)
         else:
             self.predictor = torch.nn.Linear(128, 2)
+            self.activation = torch.nn.ReLU()
     
     def forward(self, x_viz, x_stat):
         #Apply the econder to all the elements 

@@ -77,7 +77,7 @@ class Prepro:
                                                                      targets.size(-1)-1]))
         tgt_intensity = torch.select(targets,
                                        dim=-1,
-                                       index=4)
+                                       index=2)
         
         train_data = dict(X_vision=X_vision.float(),
                                X_stat=X_stat.float(),
@@ -222,6 +222,8 @@ def eval(model,
                 target = tgt_intensity
             else:
                 target = tgt_displacement
+            print("outputs", model_outputs)
+            print("target", target)
             batch_loss = loss_fn(model_outputs, target)
             assert_no_nan_no_inf(batch_loss)
             total_loss += batch_loss.item() #Do we divide by the size of the data
@@ -328,15 +330,21 @@ def main(args):
     encoder = models.CNNEncoder(n_in=3*3,
                                 n_out=128,
                                 hidden_configuration=encoder_config)
-    #n_in decoder must be out encoder + 7!
-    decoder_config = setup.decoder_config
-    #model = models.ENCDEC(n_in_decoder=128+6,
-                                #n_out_decoder=2,
-                                #encoder=encoder,
-                                #hidden_configuration_decoder=decoder_config,
-                                #window_size=args.window_size)
+    #n_in decoder must be out encoder + 6!
 
-    model = models.LINEARTransform(encoder, target_intensity=args.target_intensity)
+
+    if args.encdec:
+        decoder_config = setup.decoder_config
+        # if target intensity then 1 value to predict
+        n_out_decoder = 2 - args.target_intensity
+        model = models.ENCDEC(n_in_decoder=128+6,
+                                n_out_decoder=n_out_decoder,
+                                encoder=encoder,
+                                hidden_configuration_decoder=decoder_config,
+                                window_size=args.window_size)
+
+    else:
+        model = models.LINEARTransform(encoder, target_intensity=args.target_intensity)
     model = model.to(device)
     
     print("Using model", model)
