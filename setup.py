@@ -73,6 +73,10 @@ def add_model_parser(parser):
                         type=int,
                         help='GPU index. Use -1 for cpu', 
                         default=-1)
+    parser.add_argument('--target_intensity',
+                        action="store_true",
+                        help='Predict intensity (windspeed) instead of displacement if enabled')
+
     return parser
 
 

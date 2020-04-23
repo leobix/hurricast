@@ -71,18 +71,18 @@ class Prepro:
         X_vision = X_vision.flatten(start_dim=2, end_dim=3)
 
         print("New dataset and corresponding sizes: ", X_vision.size(), X_stat.size(), targets.size())
-        target_displacement = torch.index_select(targets,
+        tgt_displacement = torch.index_select(targets,
                                                  dim=-1,
                                                  index=torch.tensor([targets.size(-1)-2,
                                                                      targets.size(-1)-1]))
-        target_velocity = torch.select(targets,
+        tgt_intensity = torch.select(targets,
                                        dim=-1,
                                        index=4)
         
         train_data = dict(X_vision=X_vision.float(),
                                X_stat=X_stat.float(),
-                               target_displacement=target_displacement,
-                               target_velocity=target_velocity)
+                               target_displacement=tgt_displacement,
+                               target_velocity=tgt_intensity)
         return train_data
 
     def remove_zeros(self, x_viz, x_stat, tgt_displacement, tgt_velocity):
@@ -196,6 +196,7 @@ def assert_no_nan_no_inf(x):
 def eval(model,
         loss_fn, 
         test_loader,
+        target_intensity = False,
         device=torch.device('cpu')):
     """
     #TODO: Comment a bit    
@@ -213,10 +214,14 @@ def eval(model,
         #Put data on GPU
         data_batch = tuple(map(lambda x: x.to(device), 
                                     data_batch))
-        x_viz, x_stat, target, _ = data_batch
+        x_viz, x_stat, tgt_displacement, tgt_intensity = data_batch
         with torch.no_grad():
            
             model_outputs = model(x_viz, x_stat)
+            if target_intensity:
+                target = tgt_intensity
+            else:
+                target = tgt_displacement
             batch_loss = loss_fn(model_outputs, target)
             assert_no_nan_no_inf(batch_loss)
             total_loss += batch_loss.item() #Do we divide by the size of the data
@@ -233,7 +238,8 @@ def train(model,
         args,
         scheduler=None,
         l2_reg=0., 
-        device=torch.device('cpu')):
+        device=torch.device('cpu'),
+        target_intensity = False):
     """
     #TODO: Comment a bit    
     """
@@ -252,10 +258,14 @@ def train(model,
             #Put data on GPU
             data_batch = tuple(map(lambda x: x.to(device), 
                                     data_batch))
-            x_viz, x_stat, target, _ = data_batch
+            x_viz, x_stat, tgt_displacement, tgt_intensity = data_batch
             optimizer.zero_grad()
 
             model_outputs = model(x_viz, x_stat)
+            if target_intensity:
+                target = tgt_intensity
+            else:
+                target = tgt_displacement
             batch_loss = loss_fn(model_outputs, target)
             assert_no_nan_no_inf(batch_loss)
             if l2_reg > 0:
@@ -279,6 +289,7 @@ def train(model,
         eval_loss_sample ,_ , _ = eval(model,
                                 loss_fn=loss_fn,
                                 test_loader=test_loader,
+                                target_intensity = target_intensity,
                                 device=device)
         #@Theo TODO I commented because it was bugging.
         #if eval_loss_sample < previous_best:
@@ -300,13 +311,6 @@ def main(args):
     #Load files and reformat.
     vision_data = np.load(osp.join(args.data_dir, args.vision_name), allow_pickle = True) #NUMPY ARRAY
     y = np.load(osp.join(args.data_dir, args.y_name), allow_pickle = True)
-    
-    #y, _ = data_processing.prepare_tabular_data_vision(
-    #        path=osp.join(args.data_dir, "last3years.csv"),
-    #        min_wind=args.min_wind, 
-    #        min_steps=args.min_steps,
-    #        max_steps=args.max_steps, 
-    #        get_displacement=True)
    
     train_tensors, test_tensors = Prepro.process(vision_data, 
                                 y, 
@@ -325,13 +329,14 @@ def main(args):
                                 n_out=128,
                                 hidden_configuration=encoder_config)
     #n_in decoder must be out encoder + 7!
-    #decoder_config = setup.decoder_config
-    #model = models.ENCDEC(n_in_decoder=128+7, 
-    #                           n_out_decoder=2, 
-    #                           encoder=encoder, 
-    #                           hidden_configuration_decoder=decoder_config, 
-    #                            window_size=args.window_size)
-    model = models.LINEARTransform(encoder)
+    decoder_config = setup.decoder_config
+    #model = models.ENCDEC(n_in_decoder=128+6,
+                                #n_out_decoder=2,
+                                #encoder=encoder,
+                                #hidden_configuration_decoder=decoder_config,
+                                #window_size=args.window_size)
+
+    model = models.LINEARTransform(encoder, target_intensity=args.target_intensity)
     model = model.to(device)
     
     print("Using model", model)
@@ -346,7 +351,8 @@ def main(args):
                                 test_loader=test_loader,
                                 args={},
                                 scheduler=None,
-                                l2_reg=args.l2_reg)
+                                l2_reg=args.l2_reg,
+                                target_intensity = args.target_intensity)
     plt.plot(loss)
     plt.title('Training loss')
     plt.show()
@@ -357,6 +363,7 @@ def main(args):
 if __name__ == "__main__":
     import setup
     args = setup.create_setup()
+    print(args)
     main(args)
 
     
