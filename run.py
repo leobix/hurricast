@@ -1,5 +1,4 @@
-
-import sys 
+import sys
 sys.path.append('../')
 import torch 
 import torch.nn as nn
@@ -59,7 +58,7 @@ class Prepro:
         #Unfold
         X_vision = self.vision_data[:, :-predict_at].unfold(1, window_size, 1)
         X_stat = self.y[:, :-predict_at].unfold(1, window_size, 1)
-        #Taregts
+        #Targets
         target_displacement = self.y[:, window_size:].unfold(1, window_size, 1).sum(axis=-1) 
         target_intensity = self.y[:, (predict_at + window_size)-1:]
         #Permute
@@ -94,6 +93,7 @@ class Prepro:
 
     def remove_zeros(self, x_viz, x_stat, tgt_displacement, tgt_velocity):
         good_indices = torch.sum(tgt_displacement == 0, axis=1) != 2
+        #good_indices = np.nonzero(tgt_velocity)
         x_viz = x_viz[good_indices]
         x_stat = x_stat[good_indices]
         tgt_displacement = tgt_displacement[good_indices]
@@ -347,9 +347,9 @@ def train(model,
                                 device=device)
         
         #@Theo TODO I commented because it was bugging.
-        if eval_loss_sample < previous_best:
-            previous_best = eval_loss_sample
-            torch.save(model.state_dict(), osp.join(args.output_dir, 'best_model.pt'))
+        #if eval_loss_sample < previous_best:
+            #previous_best = eval_loss_sample
+            #torch.save(model.state_dict(), osp.join(args.output_dir, 'best_model.pt'))
     
         model.train()
         loop.set_description('Epoch {} | Loss {}'.format(epoch,
@@ -432,7 +432,7 @@ def main(args):
 if __name__ == "__main__":
     import setup
     args = setup.create_setup()
-    #print(vars(args), type(vars(args)))
+    print(vars(args), type(vars(args)))
 
     main(args)
 
