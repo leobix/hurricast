@@ -154,3 +154,13 @@ def download_all2(data):
         i+=1
         print("Storm ", i, " completed.")
     print("Download complete.")
+
+
+def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = './data/last3years.csv'):
+    data = get_storms(min_wind = min_wind, min_steps = min_steps, max_steps = max_steps, path = path, extraction=True)
+    vision_data = extract_vision(data, epsilon=0.05)
+    y, _ = prepare_tabular_data_vision(min_wind=min_wind,
+                                        min_steps=min_steps,
+                                        max_steps=max_steps)
+    np.save("data/" + vision_name, vision_data, allow_pickle=True)
+    np.save("data/" + y_name, y, allow_pickle=True)
