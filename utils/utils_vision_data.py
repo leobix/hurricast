@@ -1,6 +1,6 @@
-#import cdsapi
+import cdsapi
 import numpy as np
-#import netCDF4
+import netCDF4
 import matplotlib.pyplot as plt
 from datetime import datetime
 from utils.data_processing import *
@@ -63,8 +63,6 @@ def get_storm_vision(storm, epsilon = 0):
     epsilon is a parameter in case there is a scenario whith not correct grid size
     '''
     l = np.zeros((len(storm), 3, 3, 25, 25))
-    bad_shapes = []
-    times, lati, long = [], [], []
     for i in range(len(storm)):
         time, lat, lon = storm[i]
         try :
@@ -75,10 +73,6 @@ def get_storm_vision(storm, epsilon = 0):
                 print(b.shape)
                 print(time, lat, lon)
                 get_data(['700', '500', '225'], ['geopotential', 'u_component_of_wind', 'v_component_of_wind'], time, lat, lon, grid_size = 25, force = True, epsilon = epsilon)
-                times.append(time)
-                lati.append(lat)
-                long.append(lon)
-                bad_shapes.append(b)
             except:
                 pass
     return l
@@ -157,6 +151,16 @@ def download_all2(data):
 
 
 def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = './data/last3years.csv'):
+    '''
+    create_dataset(30, 16, 120, 'vision_data_30_16_120_3years.npy', 'y_30_16_120_3years.npy')
+    :param min_wind:
+    :param min_steps:
+    :param max_steps:
+    :param vision_name:
+    :param y_name:
+    :param path:
+    :return: nothing but creates the datasets
+    '''
     data = get_storms(min_wind = min_wind, min_steps = min_steps, max_steps = max_steps, path = path, extraction=True)
     vision_data = extract_vision(data, epsilon=0.05)
     y, _ = prepare_tabular_data_vision(min_wind=min_wind,
