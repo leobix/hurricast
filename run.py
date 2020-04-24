@@ -59,7 +59,9 @@ class Prepro:
         X_vision = self.vision_data[:, :-predict_at].unfold(1, window_size, 1)
         X_stat = self.y[:, :-predict_at].unfold(1, window_size, 1)
         #Targets
-        target_displacement = self.y[:, window_size:].unfold(1, window_size, 1).sum(axis=-1) 
+        #@Theo TODO change this line
+        #target_displacement = self.y[:, window_size:].unfold(1, window_size, 1).sum(axis=-1)
+        target_displacement = self.y[:, (predict_at + window_size) - 1:]
         target_intensity = self.y[:, (predict_at + window_size)-1:]
         #Permute
         X_vision = X_vision.permute(0, 1, 6, 2, 3, 4, 5) #TODO:Make more automatic
@@ -375,7 +377,7 @@ def main(args):
     train_ds = TensorDataset(*train_tensors)
     test_ds = TensorDataset(*test_tensors)
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, drop_last = True)
     test_loader = torch.utils.data.DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
 
     # Create model
@@ -398,7 +400,7 @@ def main(args):
                                 window_size=args.window_size)
 
     else:
-        model = models.LINEARTransform(encoder, target_intensity=args.target_intensity)
+        model = models.LINEARTransform(encoder, args.window_size, target_intensity=args.target_intensity)
         decoder_config = None
 
     #Add Tensorboard    
@@ -406,8 +408,10 @@ def main(args):
     model = model.to(device)
     
     print("Using model", model)
-    optimizer = torch.optim.Adam(model.parameters(), 
+    optimizer = torch.optim.Adam(model.parameters(),
                                 lr=args.lr)
+    if args.sgd:
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     
     model, optimizer, loss = train(model,
                                 optimizer=optimizer,
@@ -425,7 +429,8 @@ def main(args):
     plt.show()
     #Sve results
     #with open(path_to_results, 'w') as writer:
-    torch.save(model.state_dict(), osp.join(args.output_dir, 'final_model.pt'))
+    if args.save:
+        torch.save(model.state_dict(), osp.join(args.output_dir, 'final_model.pt'))
 
 
 

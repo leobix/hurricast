@@ -80,6 +80,12 @@ def add_model_parser(parser):
     parser.add_argument('--encdec',
                         action="store_true",
                         help='Decide if ENCDEC')
+    parser.add_argument('--save',
+                        action="store_true",
+                        help='Decide if you want to save the model')
+    parser.add_argument('--sgd',
+                        action="store_true",
+                        help='Decide if you want to use SGD over Adam')
 
     return parser
 
