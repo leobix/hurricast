@@ -4,6 +4,7 @@ import json
 import torch
 import numpy as np
 import sys
+from torch.utils.tensorboard import SummaryWriter
 sys.path.append('../')
 
 
@@ -166,6 +167,19 @@ def create_setup():
 
     return args
 
+
+def create_board(args, model, configs:list):
+    writer = SummaryWriter(args.output_dir)  # Add tensorboard
+    #writer.add_hparams(hparam_dict=vars(args),
+    #                   metric_dict={'accuracy': torch.tensor(0)})
+    config_ = ""
+    for config in configs:
+        config_ += "{}\n".format(config)
+    writer.add_text('Args', json.dumps(vars(args), indent=2))
+    writer.add_text('Model', json.dumps(model.__str__(), indent=4))
+    writer.add_text('Configs', config_)
+    return writer
+    
 
 #def create_models(model_name, 
 #                config_name, 

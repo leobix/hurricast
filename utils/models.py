@@ -366,7 +366,6 @@ class ConvLSTM(nn.Module):
             param = [param] * num_layers
         return param
 
-
 #==========================
 # New versions of our layers
 encoder_config = (
@@ -380,7 +379,7 @@ encoder_config = (
     ('fc', 128)
 )
 
-decoder_config = decoder_config = (
+decoder_config = (
     ('gru', 128),
     ('gru', 128)
 )

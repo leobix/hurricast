@@ -1,3 +1,4 @@
+
 import sys 
 sys.path.append('../')
 import torch 
@@ -58,31 +59,37 @@ class Prepro:
         #Unfold
         X_vision = self.vision_data[:, :-predict_at].unfold(1, window_size, 1)
         X_stat = self.y[:, :-predict_at].unfold(1, window_size, 1)
-        targets = self.y[:, (predict_at + window_size)-1:]
+        #Taregts
+        target_displacement = self.y[:, window_size:].unfold(1, window_size, 1).sum(axis=-1) 
+        target_intensity = self.y[:, (predict_at + window_size)-1:]
         #Permute
         X_vision = X_vision.permute(0, 1, 6, 2, 3, 4, 5) #TODO:Make more automatic
         X_stat = X_stat.permute(0, 1, 3, 2)  # TODO:Make more automatic
 
-        #print('vis', X_vision.size())
-        X_vision, X_stat, targets = map(lambda x: x.flatten(
-            end_dim=1), (X_vision, X_stat, targets)) #Flatten everything
+        #N_ouragans, N_unrolled, ... --> N_ouragans x N_unrolled 
+        X_vision, X_stat, \
+            target_displacement, target_intensity= map(lambda x: x.flatten(
+                end_dim=1), (X_vision, X_stat, target_displacement, target_intensity))  # Flatten everything
 
         #REsize X_vision
         X_vision = X_vision.flatten(start_dim=2, end_dim=3)
-
-        print("New dataset and corresponding sizes: ", X_vision.size(), X_stat.size(), targets.size())
-        tgt_displacement = torch.index_select(targets,
+    
+        tgt_displacement = torch.index_select(target_displacement,
                                                  dim=-1,
-                                                 index=torch.tensor([targets.size(-1)-2,
-                                                                     targets.size(-1)-1]))
-        tgt_intensity = torch.select(targets,
+                                                 index=torch.tensor([target_displacement.size(-1)-2,
+                                                                     target_displacement.size(-1)-1]))
+        #print(target_intensity.size())
+        tgt_intensity = torch.select(target_intensity,
                                        dim=-1,
                                        index=2)
         
         train_data = dict(X_vision=X_vision.float(),
                                X_stat=X_stat.float(),
                                target_displacement=tgt_displacement,
-                               target_velocity=tgt_intensity)
+                               target_intensity=tgt_intensity)
+        print("New dataset and corresponding sizes:")
+        for k, v in train_data.items():
+            print(k, v.size())
         return train_data
 
     def remove_zeros(self, x_viz, x_stat, tgt_displacement, tgt_velocity):
@@ -101,6 +108,7 @@ class Prepro:
         s = torch.std(
             X_vision.flatten(end_dim=1), 
             axis=(0, -2, -1)).view(1, 1, 9, 1, 1)
+        
         return m,s
                         
 
@@ -130,10 +138,20 @@ class Prepro:
                 dim=0, index=torch.Tensor(test_idx).long()),
             data_tensors)
         )
-        #Compute mean/std on the training set
+        #Compute mean/std on the training set 
         m, s = obj.get_mean_std(train_tensors[0]) #Only the X_vision for now.
         train_tensors[0] = (train_tensors[0] - m)/s
         test_tensors[0] = (test_tensors[0] - m)/s
+        #Normalize velocity target
+        m_velocity = train_tensors[-1].mean()
+        s_velocity = train_tensors[-1].std()
+        train_tensors[-1] = (train_tensors[-1] - m_velocity)/s_velocity
+        test_tensors[-1] = (test_tensors[-1] - m_velocity)/s_velocity
+
+        m_dis =  train_tensors[-2].mean(axis=0)
+        s_dis = train_tensors[-2].std(axis=0)
+        train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
+        test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
         return train_tensors, test_tensors
         
         
@@ -193,13 +211,17 @@ def assert_no_nan_no_inf(x):
     assert not torch.isnan(x).any()
     assert not torch.isinf(x).any()
 
+
 def eval(model,
         loss_fn, 
         test_loader,
+        writer, 
+        epoch_number,
         target_intensity = False,
         device=torch.device('cpu')):
     """
     #TODO: Comment a bit    
+    #TODO: Fix tensorboard here
     """
     # set model in training mode
     model.eval()
@@ -210,26 +232,50 @@ def eval(model,
     total_loss = 0.
     total_n_eval = 0.
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
+    tgts = [] #Get a list for tensorboard
+    preds = []
     for data_batch in loop:
         #Put data on GPU
         data_batch = tuple(map(lambda x: x.to(device), 
                                     data_batch))
         x_viz, x_stat, tgt_displacement, tgt_intensity = data_batch
         with torch.no_grad():
-           
+    
             model_outputs = model(x_viz, x_stat)
             if target_intensity:
                 target = tgt_intensity
             else:
                 target = tgt_displacement
-            print("outputs", model_outputs)
-            print("target", target)
+
+            tgts.append(target)
+            preds.append(model_outputs)
+            #print("outputs", model_outputs)
+            #print("target", target)
+            
+            #preds.append(model_outputs)
+
             batch_loss = loss_fn(model_outputs, target)
             assert_no_nan_no_inf(batch_loss)
             total_loss += batch_loss.item() #Do we divide by the size of the data
             total_n_eval += target.size(0)
-    print(total_loss/float(total_n_eval))
+    
+    tgts = torch.cat(tgts)
+    preds = torch.cat(preds)
+    if not target_intensity:
+        tgts = torch.norm(tgts, p=2, dim=1)
+        preds = torch.norm(preds, p=2, dim=1)
+    writer.add_histogram("Distribution of targets", tgts, global_step=epoch_number)
+    writer.add_histogram("Distribution of predictions", preds , global_step=epoch_number)
+
+    writer.add_scalar('total_eval_loss',
+                      total_loss,
+                      epoch_number)
+    writer.add_scalar('avg_eval_loss', 
+                      total_loss/float(total_n_eval),
+                      epoch_number)
+    model.train()
     return model, total_loss, total_n_eval
+
 
 def train(model,
         optimizer,
@@ -238,6 +284,7 @@ def train(model,
         train_loader,
         test_loader,
         args,
+        writer, 
         scheduler=None,
         l2_reg=0., 
         device=torch.device('cpu'),
@@ -256,11 +303,12 @@ def train(model,
     loop = tqdm.trange(n_epochs, desc='Epochs')
     for epoch in loop:
         inner_loop = tqdm.tqdm(train_loader, desc='Inner loop')
-        for data_batch in inner_loop:
+        for i, data_batch in enumerate(inner_loop):
             #Put data on GPU
             data_batch = tuple(map(lambda x: x.to(device), 
                                     data_batch))
-            x_viz, x_stat, tgt_displacement, tgt_intensity = data_batch
+            x_viz, x_stat, \
+                tgt_displacement, tgt_intensity = data_batch
             optimizer.zero_grad()
 
             model_outputs = model(x_viz, x_stat)
@@ -279,8 +327,9 @@ def train(model,
                 assert_no_nan_no_inf(batch_loss)
 
             training_loss.append(batch_loss.item())
-
-
+            writer.add_scalar('training loss',
+                              batch_loss.item(),
+                              epoch * len(train_loader) + i)
             batch_loss.backward()
             optimizer.step()
 
@@ -288,15 +337,19 @@ def train(model,
                 scheduler.step()
             inner_loop.set_description('Epoch {} | Loss {}'.format(epoch,
                                                          batch_loss.item()))
-        eval_loss_sample ,_ , _ = eval(model,
+        
+        _, eval_loss_sample, _ = eval(model,
                                 loss_fn=loss_fn,
                                 test_loader=test_loader,
-                                target_intensity = target_intensity,
+                                writer=writer,
+                                epoch_number=epoch,
+                                target_intensity=target_intensity,
                                 device=device)
+        
         #@Theo TODO I commented because it was bugging.
-        #if eval_loss_sample < previous_best:
-            #previous_best = eval_loss_sample
-            #torch.save(model, osp.join(args.output_dir, 'best_model.pt'))
+        if eval_loss_sample < previous_best:
+            previous_best = eval_loss_sample
+            torch.save(model.state_dict(), osp.join(args.output_dir, 'best_model.pt'))
     
         model.train()
         loop.set_description('Epoch {} | Loss {}'.format(epoch,
@@ -330,9 +383,10 @@ def main(args):
     encoder = models.CNNEncoder(n_in=3*3,
                                 n_out=128,
                                 hidden_configuration=encoder_config)
+    
+    
+    
     #n_in decoder must be out encoder + 6!
-
-
     if args.encdec:
         decoder_config = setup.decoder_config
         # if target intensity then 1 value to predict
@@ -345,6 +399,10 @@ def main(args):
 
     else:
         model = models.LINEARTransform(encoder, target_intensity=args.target_intensity)
+        decoder_config = None
+
+    #Add Tensorboard    
+    writer = setup.create_board(args, model, configs=[encoder_config, decoder_config])
     model = model.to(device)
     
     print("Using model", model)
@@ -358,6 +416,7 @@ def main(args):
                                 train_loader=train_loader,
                                 test_loader=test_loader,
                                 args={},
+                                writer=writer,
                                 scheduler=None,
                                 l2_reg=args.l2_reg,
                                 target_intensity = args.target_intensity)
@@ -366,12 +425,15 @@ def main(args):
     plt.show()
     #Sve results
     #with open(path_to_results, 'w') as writer:
-    torch.save(model, osp.join(args.output_dir, 'final_model.pt'))
+    torch.save(model.state_dict(), osp.join(args.output_dir, 'final_model.pt'))
+
+
 
 if __name__ == "__main__":
     import setup
     args = setup.create_setup()
-    print(args)
+    #print(vars(args), type(vars(args)))
+
     main(args)
 
     
