@@ -275,12 +275,12 @@ def eval(model,
     writer.add_histogram("Distribution of targets (intensity)",
                          tgts['i'], global_step=epoch_number)
     try:
-        preds['d'] = torch.norm(preds, p=2, dim=1)
+        preds['d'] = torch.norm(preds['d'], p=2, dim=1)
         log = "Distribution of predictions (displacement)"
         writer.add_histogram(log, preds , global_step=epoch_number)
     except:
         log = "Distribution of predictions (intensity)"
-        writer.add_histogram(log, preds, global_step=epoch_number)
+        writer.add_histogram(log, preds['i'], global_step=epoch_number)
     
     writer.add_scalar('total_eval_loss',
                       total_loss,
@@ -422,7 +422,6 @@ def main(args):
     if args.sgd:
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     
-
     #optimizer = torch.optim.SGD(model.parameters(), 
     #                            lr=args.lr)
     loss_mode = 'intensity' if args.target_intensity else 'displacement'
