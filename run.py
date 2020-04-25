@@ -248,8 +248,8 @@ def eval(model,
     total_loss = 0.
     total_n_eval = 0.
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
-    tgts = {'d': [ ], 'i': [ ]} #Get a list for tensorboard
-    preds = {'i': [ ] } if args.target_intensity else {'d': [ ] }
+    tgts = {'d': [], 'i': [] } #Get a dict of lists for tensorboard
+    preds = {'i': [] } if args.target_intensity else {'d': [] }
     for data_batch in loop:
         #Put data on GPU
         data_batch = tuple(map(lambda x: x.to(device), 
@@ -263,15 +263,19 @@ def eval(model,
             total_n_eval += tgt_intensity.size(0)
 
             #Keep track of the predictions/targets
-            tgts.get('d').append(tgt_displacement)
-            tgts.get('i').append(target_intensity)
+            tgts['d'].append(tgt_displacement)
+            tgts['i'].append(tgt_intensity)
             preds.get(tuple(preds.keys())[0]).append(model_outputs)
     
     tgts = { k : torch.cat(v) for k, v in tgts.items() }
     preds = { k: torch.cat(v) for k, v in preds.items()} 
     #=====================================
-    #Compute norms and duck type.
+    #Compute norms, duck type and add to board.
     tgts['d'] = torch.norm(tgts['d'], p=2, dim=1)
+    writer.add_histogram("Distribution of targets (displacement)",
+                        tgts['d'], global_step=epoch_number)
+    writer.add_histogram("Distribution of targets (intensity)",
+                         tgts['i'], global_step=epoch_number)
     try:
         preds['d'] = torch.norm(preds, p=2, dim=1)
         log = "Distribution of predictions (displacement)"
@@ -279,9 +283,6 @@ def eval(model,
     except:
         log = "Distribution of predictions (intensity)"
         writer.add_histogram(log, preds, global_step=epoch_number)
-    
-    writer.add_histogram("Distribution of targets (displacement)", tgts['d'], global_step=epoch_number)
-    writer.add_histogram("Distribution of targets (intensity)", tgts['i'], global_step=epoch_number)
     
     writer.add_scalar('total_eval_loss',
                       total_loss,
