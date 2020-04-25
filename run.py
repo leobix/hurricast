@@ -1,5 +1,4 @@
-
-import sys 
+import sys
 sys.path.append('../')
 import torch 
 import torch.nn as nn
@@ -75,7 +74,6 @@ class Prepro:
         X_vision = self.vision_data[:, :-predict_at].unfold(1, window_size, 1)
         X_stat = self.y[:, :-predict_at].unfold(1, window_size, 1)
         #Targets
-        #TODO: Take care of the zeros
         target_displacement = self.y[:, window_size:].unfold(1, predict_at, 1)#.sum(axis=-1) 
         target_intensity = self.y[:, (predict_at + window_size)-1:]
         #Permute: Put the last dimension on axis=2: (..., ..., 8, ...,...
@@ -364,8 +362,7 @@ def train(model,
         if eval_loss_sample < previous_best:
             previous_best = eval_loss_sample
             torch.save(model.state_dict(), 
-                osp.join(args.output_dir, 'best_model.pt'))
-    
+                osp.join(args.output_dir, 'best_model.pt'))  
         model.train()
         loop.set_description('Epoch {} | Loss {}'.format(epoch,
                                                          eval_loss_sample)
@@ -390,12 +387,8 @@ def main(args):
     train_ds = TensorDataset(*train_tensors)
     test_ds = TensorDataset(*test_tensors)
 
-    train_loader = DataLoader(train_ds, 
-                            batch_size=args.batch_size, 
-                            shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_ds, 
-                                            batch_size=args.batch_size, 
-                                            shuffle=False)
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, drop_last = True)
+    test_loader = torch.utils.data.DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
 
     # Create model
     encoder_config = setup.encoder_config #Load pre-defined config
@@ -415,7 +408,7 @@ def main(args):
                                 window_size=args.window_size)
 
     else:
-        model = models.LINEARTransform(encoder, target_intensity=args.target_intensity)
+        model = models.LINEARTransform(encoder, args.window_size, target_intensity=args.target_intensity)
         decoder_config = None
 
     #Add Tensorboard    
@@ -423,12 +416,18 @@ def main(args):
     model = model.to(device)
     
     print("Using model", model)
-    optimizer = torch.optim.Adam(model.parameters(), 
+    optimizer = torch.optim.Adam(model.parameters(),
                                 lr=args.lr)
+
+    if args.sgd:
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+    
+
     #optimizer = torch.optim.SGD(model.parameters(), 
     #                            lr=args.lr)
     loss_mode = 'intensity' if args.target_intensity else 'displacement'
     loss_fn = create_loss_fn(loss_mode)
+
     model, optimizer, loss = train(model,
                                 optimizer=optimizer,
                                 loss_fn=loss_fn,
@@ -443,16 +442,16 @@ def main(args):
     plt.plot(loss)
     plt.title('Training loss')
     plt.show()
-    # Save results
-    # with open(path_to_results, 'w') as writer:
-    torch.save(model.state_dict(), 
-    osp.join(args.output_dir, 'final_model.pt'))
+
+    if args.save:
+        torch.save(model.state_dict(), osp.join(args.output_dir, 'final_model.pt'))
 
 
 
 if __name__ == "__main__":
     import setup
     args = setup.create_setup()
+    #print(vars(args)
     setup.create_seeds()
     main(args)
 

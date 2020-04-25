@@ -604,10 +604,10 @@ class LINEARTransform(torch.nn.Module):
     """
     Simple Net used to debug.
     """
-    def __init__(self, encoder, target_intensity = False):
+    def __init__(self, encoder, window_size, target_intensity = False):
         super(LINEARTransform, self).__init__()
         self.encoder = encoder
-        self.linear = torch.nn.Linear(128 * 8, 128)
+        self.linear = torch.nn.Linear(128 * window_size, 128)
         self.target_intensity = target_intensity
         if self.target_intensity:
             self.predictor = torch.nn.Linear(128, 1)
