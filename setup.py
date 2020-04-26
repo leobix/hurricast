@@ -4,18 +4,12 @@ import json
 import torch
 import numpy as np
 import sys
+import torch 
 from torch.utils.tensorboard import SummaryWriter
 sys.path.append('../')
 
-
-models = {
-        'TRANSFORMER': models.TRANSFORMER, 
-        'CNNEncoder': models.CNNEncoder, 
-        'ENCDEC': models.ENCDEC, 
-        'LINEARTransform': models.LINEARTransform
-        }
-
-#========================================================
+#TODO: Put all the shortcuts in __init__ 
+#===========================================
 # Create some configs that we'll be using frequently
 encoder_config = (
     ('conv', 64),
@@ -28,12 +22,57 @@ encoder_config = (
     ('fc', 128)
 )
 
-decoder_config = decoder_config = (
+encdec_config = (
     ('gru', 128),
     ('gru', 128)
 )
 
+lineartransform_config = (
+    None,
+)
+
+transformer_config = {'d_model': 128,
+                      'nhead': 4,
+                      'num_layers': 4
+                      }
 #======================================================
+# Store dict of configurations that we'll be using 
+encoder_args = dict(n_in=3*3,
+                    n_out=128,
+                    hidden_configuration=encoder_config)
+
+encdec_args = dict(n_in_decoder=128+6,
+                   n_out_decoder=128,
+                   hidden_configuration_decoder=encdec_config,
+                   window_size=8)
+
+lineartransform_args = dict(n_in_decoder=128,
+                            n_out_decoder=128,
+                            hidden_configuration_decoder=lineartransform_config,
+                            window_size=8)
+
+transformer_args = dict(n_in_decoder=128+6,
+                        n_out_decoder=128+6,
+                        hidden_configuration_decoder=transformer_config,
+                        window_size=None)
+#========================================================
+# Shortcuts for our models
+models_names = {'LINEARTransform': models.LINEARTransform,
+          'ENCDEC': models.ENCDEC,
+          'TRANSFORMER': models.TRANSFORMER,
+          'CNNEncoder': models.CNNEncoder}
+
+
+configs = {'LINEARTransform': lineartransform_config,
+          'ENCDEC':encdec_config,
+          'TRANSFORMER': transformer_config,
+          'CNNEncoder': None}
+
+
+stored_args = {'LINEARTransform': lineartransform_args,
+               'ENCDEC': encdec_args,
+               'TRANSFORMER': transformer_config,
+               'CNNEncoder': encoder_args}
 
 def add_model_parser(parser):
 
@@ -74,19 +113,30 @@ def add_model_parser(parser):
                         type=int,
                         help='GPU index. Use -1 for cpu', 
                         default=-1)
+
     parser.add_argument('--target_intensity',
                         action="store_true",
                         help='Predict intensity (windspeed) instead of displacement if enabled')
+
     parser.add_argument('--encdec',
                         action="store_true",
                         help='Decide if ENCDEC')
+            
     parser.add_argument('--save',
                         action="store_true",
                         help='Decide if you want to save the model')
+
     parser.add_argument('--sgd',
                         action="store_true",
                         help='Decide if you want to use SGD over Adam')
+    
+    parser.add_argument('--encoder_name', 
+                            type=str, 
+                            default='CNNEncoder')
 
+    parser.add_argument('--decoder_name', 
+                            type=str,
+                            default='LINEARTransform')
     return parser
 
 
@@ -187,12 +237,56 @@ def create_board(args, model, configs:list):
     return writer
     
 
-#def create_models(model_name, 
-#                config_name, 
-#                **model_kwargs):
-#    #TODO: Use when know the different models that we want.
-#    models[model_name)
+def create_model(encoder_name: str,
+                 decoder_name: str,
+                 wrapper_args:dict, 
+                 args):
+    
+    stored_args[decoder_name]['window_size'] = args.window_size
+
+    encoder = models_names[encoder_name](**stored_args[encoder_name])
+    decoder = models_names[decoder_name](encoder, **stored_args[decoder_name])
+    model = models.WRAPPER(model=decoder, **wrapper_args)
+    return model
 
 
+def create_loss_fn(mode='intensity'):
+    """
+    Wrappers that uses same signature for all loss_functions.
+    Can easily add new losses function here.
+    #TODO: Théo--> See if we can make an entropy based loss.
+    
+    """
+    assert mode in ['displacement',
+                    'intensity']  # , 'sum']
+
+    base_loss_fn = torch.nn.MSELoss()
+
+    def displacement_loss(model_outputs,
+                          target_displacement,
+                          target_intensity):
+        return base_loss_fn(model_outputs,
+                            target_displacement)
+
+    def intensity_loss(model_outputs,
+                       target_displacement,
+                       target_intensity):
+        return base_loss_fn(model_outputs,
+                            target_intensity)
+
+    losses_fn = dict(displacement=displacement_loss,
+                     intensity=intensity_loss)
+    return losses_fn[mode]
+
+
+def create_optimizer(model, sgd=False, lr=1e-4):
+    if sgd:
+        optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=lr,
+                                    momentum=0.9)
+    else:
+        optimizer = torch.optim.Adam(model.parameters(),
+                                    lr=lr)
+    return optimizer
     
 

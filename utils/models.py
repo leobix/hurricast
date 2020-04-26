@@ -379,12 +379,21 @@ encoder_config = (
     ('fc', 128)
 )
 
-decoder_config = (
+encdec_config = (
     ('gru', 128),
     ('gru', 128)
 )
 
+lineartransform_config = (None,
+)
 
+transformer_config = {'d_model': 128,
+                      'nhead': 4,
+                      'num_layers': 4
+}
+
+#====================================================
+# Encoders
 class CNNEncoder(nn.Module):
     """
     CNNEncoder class
@@ -485,7 +494,9 @@ class CNNEncoder(nn.Module):
         #TODO: Ask whether we need to create some init. methods really?
         return NotImplementedError
 
-
+#====================================================
+# Decoders
+# Have a forwad pass that uses both image and tabular data.
 class ENCDEC(nn.Module):
     #TODO: Make sure we can apply the CNN before feeding all of it
     #to the RNN --> I'm affraid we may not backprop correctly. Make sure that works
@@ -566,55 +577,63 @@ class ENCDEC(nn.Module):
 
 class TRANSFORMER(nn.Module):
     """
-
+    #TODO: 
     """
     def __init__(self, 
-                encoder, 
-                d_model, 
-                n_head, 
-                n_transformer_layer):
+                encoder,
+                n_in_decoder: int,
+                n_out_decoder: int,
+                hidden_configuration_decoder: dict,
+                window_size: int):
         super(TRANSFORMER, self).__init__()
         warnings.warn('Using a Transformer model without positional encoding', 
                 UserWarning)
         self.encodercnn = encoder
-        self.d_model = d_model
-        self.n_head = n_head
-        self.n_transformer_layer = n_head
-        self.transformer_layers = self.create_layers()
-        assert hasattr(self, 'encodercnn')
+        self.n_in_decoder = n_in_decoder
+        self.config = hidden_configuration_decoder
+        self.transformer_layers = self.create_transformer()
     
-    def create_layers(self):
-        layers = [self.encodercnn]
-        layers.extend([nn.TransformerEncoderLayer(
-                                d_model=self.d_model, 
-                                nhead=self.n_head)] 
-                                * self.n_transformer_layer)
-        return nn.Sequential(*layers)
+    def create_transformer(self):
+        transformer_encoder_layer = nn.TransformerEncoderLayer(
+            d_model=self.n_in_decoder, 
+            nhead=self.config['nhead'])
+        transformer_encoder = nn.TransformerEncoder(
+            transformer_encoder_layer, 
+            num_layers=self.config['num_layers'])
+        return transformer_encoder
 
-    def forward(self, x):
+    def forward(self, x_viz, x_stat):
         #Naive way
         out = []
-        for x_ in x.unbind(1): #Loop over the sequence
+        for x_ in x_viz.unbind(1): #Loop over the sequence
             out.append(self.encodercnn(x_))
         out = torch.stack(out).transpose(0, 1)
-        return out#self.transformer_layers(out)
+        out = torch.cat([out, x_stat], axis=-1)
+        return self.transformer_layers(out)
 
 
 class LINEARTransform(torch.nn.Module):
     """
     Simple Net used to debug.
+    Fusion embedded images and tabular data at once in the forward pass.
     """
-    def __init__(self, encoder, window_size, target_intensity = False):
+    def __init__(self, 
+                encoder,
+                 n_in_decoder: int,
+                 n_out_decoder: int,
+                 hidden_configuration_decoder: tuple,
+                 window_size: int):
         super(LINEARTransform, self).__init__()
         self.encoder = encoder
-        self.linear = torch.nn.Linear(128 * window_size, 128)
-        self.target_intensity = target_intensity
-        if self.target_intensity:
-            self.predictor = torch.nn.Linear(128, 1)
-            self.activation = torch.nn.LeakyReLU(negative_slope=0.01)
-        else:
-            self.predictor = torch.nn.Linear(128, 2)
-            self.activation = torch.nn.ReLU()
+        self.linear = torch.nn.Linear(n_in_decoder * window_size, n_out_decoder)
+        self.activation = torch.nn.ReLU()
+        #self.target_intensity = target_intensity
+        #if self.target_intensity:
+        #    self.predictor = torch.nn.Linear(128, 1)
+        #    self.activation = torch.nn.LeakyReLU(negative_slope=0.01)
+        #else:
+        #    self.predictor = torch.nn.Linear(128, 2)
+        #    
     
     def forward(self, x_viz, x_stat):
         #Apply the econder to all the elements 
@@ -624,8 +643,62 @@ class LINEARTransform(torch.nn.Module):
         out_enc = out_enc.flatten(start_dim=1)
         out_enc = self.linear(out_enc)
         out_enc = self.activation(out_enc)
-        out_enc = self.predictor(out_enc)
+        #out_enc = self.predictor(out_enc)
         return out_enc
+
+#=======================================
+# Wrapper
+class WRAPPER(torch.nn.Module):
+    def __init__(self, 
+                model, 
+                n_in, 
+                n_out,
+                n_per_hidden_layer,  
+                activation=nn.ReLU()):
+        super(WRAPPER, self).__init__()
+        self._model = model
+        self.activation = activation
+        self.n_per_hidden_layer = n_per_hidden_layer
+        self.n_in = n_in
+        self.n_out = n_out
+        if self.n_per_hidden_layer is None:
+            self.layers = nn.Linear(n_in, n_out)
+        else:
+            assert isinstance(self.n_per_hidden_layer, list), "Need a list of dimension"
+            self.layers = self.create_layers()
+    
+    def create_layers(self):
+        layers = []
+        n_prev = self.n_in
+        for n_hidden in self.n_per_hidden_layer:
+            layers.append(nn.Linear(in_features=n_prev, out_features=n_hidden))
+            layers.append(self.activation)
+            n_prev = n_hidden
+        layers.append(nn.Linear(in_features=n_prev, out_features=self.n_out))
+        return nn.Sequential(*layers)
+    
+
+    def forward(self, *args, **kwargs):
+        out_model = self._model(*args, **kwargs)
+        return self.layers(out_model)
+    
+
+
+#Attention function, base on Alexander Rush's 
+# annotated transformer.
+def attention(query, key, value, mask=None, dropout=None):
+    """
+    Compute 'Scaled Dot Product Attention
+    """
+    d_k = query.size(-1)
+    scores = torch.matmul(query, key.transpose(-2, -1)) \
+             / math.sqrt(d_k)
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, -1e9)
+    p_attn = F.softmax(scores, dim = -1)
+    if dropout is not None:
+        p_attn = dropout(p_attn)
+    return torch.matmul(p_attn, value), p_attn
 
 
 if __name__ == "__main__":

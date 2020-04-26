@@ -5,11 +5,13 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import argparse
-from utils import utils_vision_data, data_processing, plot, models
+from utils import plot, models #utils_vision_data, data_processing,
 import matplotlib.pyplot as plt
 import tqdm
 import os 
 import os.path as osp
+import setup
+
 
 class Prepro:
     """
@@ -194,35 +196,6 @@ class Prepro:
         test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
         return train_tensors, test_tensors    
 
-    
-def create_loss_fn(mode='intensity'):
-    """
-    Wrappers that uses same signature for all loss_functions.
-    Can easily add new losses function here.
-    #TODO: Théo--> See if we can make an entropy based loss.
-    
-    """
-    assert mode in ['displacement', 
-                    'intensity']#, 'sum']
-    
-    base_loss_fn = nn.MSELoss()
-    def displacement_loss(model_outputs, 
-                        target_displacement, 
-                        target_intensity):
-        return base_loss_fn(model_outputs, 
-                    target_displacement)
-    def intensity_loss(model_outputs, 
-                        target_displacement, 
-                        target_intensity):
-        return  base_loss_fn(model_outputs, 
-                    target_intensity)
-    losses_fn = dict(displacement=displacement_loss, 
-                    intensity=intensity_loss)
-    return losses_fn[mode]
-    
-def create_model():
-    #TODO
-    raise NotImplementedError
 
 def assert_no_nan_no_inf(x):
     assert not torch.isnan(x).any()
@@ -391,42 +364,28 @@ def main(args):
     test_loader = torch.utils.data.DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
 
     # Create model
-    encoder_config = setup.encoder_config #Load pre-defined config
-    encoder = models.CNNEncoder(n_in=3*3,
-                                n_out=128,
-                                hidden_configuration=encoder_config)
-    
-    #n_in decoder must be out encoder + 6!
-    if args.encdec:
-        decoder_config = setup.decoder_config
-        # if target intensity then 1 value to predict
-        n_out_decoder = 2 - args.target_intensity
-        model = models.ENCDEC(n_in_decoder=128+6,
-                                n_out_decoder=n_out_decoder,
-                                encoder=encoder,
-                                hidden_configuration_decoder=decoder_config,
-                                window_size=args.window_size)
-
-    else:
-        model = models.LINEARTransform(encoder, args.window_size, target_intensity=args.target_intensity)
-        decoder_config = None
-
+    wrapper_args = {'n_in': 128, 'n_out': 2, 'n_per_hidden_layer': None}
+    if args.target_intensity:
+        wrapper_args['n_out'] = 1
+    model = setup.create_model(args.encoder_name, 
+                            args.decoder_name, 
+                            wrapper_args, 
+                            args)
     #Add Tensorboard    
-    writer = setup.create_board(args, model, configs=[encoder_config, decoder_config])
+    writer = setup.create_board(args, model, configs=[
+        setup.configs[args.encoder_name], 
+        setup.configs[args.decoder_name]])
     model = model.to(device)
     
     print("Using model", model)
-    optimizer = torch.optim.Adam(model.parameters(),
-                                lr=args.lr)
+    #Add optimizer
+    optimizer = setup.create_optimizer(model, args.sgd, args.lr)
 
-    if args.sgd:
-        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
-    
-    #optimizer = torch.optim.SGD(model.parameters(), 
-    #                            lr=args.lr)
+    #Create loss func
     loss_mode = 'intensity' if args.target_intensity else 'displacement'
-    loss_fn = create_loss_fn(loss_mode)
+    loss_fn = setup.create_loss_fn(loss_mode)
 
+    #Train
     model, optimizer, loss = train(model,
                                 optimizer=optimizer,
                                 loss_fn=loss_fn,
@@ -448,9 +407,8 @@ def main(args):
 
 
 if __name__ == "__main__":
-    import setup
     args = setup.create_setup()
-    #print(vars(args)
+    print(vars(args))
     setup.create_seeds()
     main(args)
 
