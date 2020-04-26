@@ -366,31 +366,6 @@ class ConvLSTM(nn.Module):
             param = [param] * num_layers
         return param
 
-#==========================
-# New versions of our layers
-encoder_config = (
-    ('conv', 64),
-    ('conv', 64),
-    ('maxpool', None),
-    ('conv', 256),
-    ('maxpool', None),
-    ('flatten', 256 * 4 * 4),
-    ('linear', 256),
-    ('fc', 128)
-)
-
-encdec_config = (
-    ('gru', 128),
-    ('gru', 128)
-)
-
-lineartransform_config = (None,
-)
-
-transformer_config = {'d_model': 128,
-                      'nhead': 4,
-                      'num_layers': 4
-}
 
 #====================================================
 # Encoders
@@ -590,9 +565,13 @@ class TRANSFORMER(nn.Module):
                 UserWarning)
         self.encodercnn = encoder
         self.n_in_decoder = n_in_decoder
+        self.n_out_decoder = n_out_decoder
+        self.window_size = window_size
         self.config = hidden_configuration_decoder
+
         self.transformer_layers = self.create_transformer()
-    
+        self.last_linear = self.create_linear()
+        
     def create_transformer(self):
         transformer_encoder_layer = nn.TransformerEncoderLayer(
             d_model=self.n_in_decoder, 
@@ -602,6 +581,10 @@ class TRANSFORMER(nn.Module):
             num_layers=self.config['num_layers'])
         return transformer_encoder
 
+    def create_linear(self):
+        return nn.Linear(self.window_size*self.n_in_decoder, 
+        self.n_out_decoder)
+
     def forward(self, x_viz, x_stat):
         #Naive way
         out = []
@@ -609,7 +592,8 @@ class TRANSFORMER(nn.Module):
             out.append(self.encodercnn(x_))
         out = torch.stack(out).transpose(0, 1)
         out = torch.cat([out, x_stat], axis=-1)
-        return self.transformer_layers(out)
+        out = self.transformer_layers(out)
+        return self.last_linear(out.flatten(start_dim=1))
 
 
 class LINEARTransform(torch.nn.Module):
@@ -626,7 +610,7 @@ class LINEARTransform(torch.nn.Module):
         super(LINEARTransform, self).__init__()
         self.encoder = encoder
         self.linear = torch.nn.Linear(n_in_decoder * window_size, n_out_decoder)
-        self.activation = torch.nn.ReLU()
+        #self.activation = torch.nn.ReLU()
         #self.target_intensity = target_intensity
         #if self.target_intensity:
         #    self.predictor = torch.nn.Linear(128, 1)
@@ -642,7 +626,6 @@ class LINEARTransform(torch.nn.Module):
         #Flatten before passing through the linear layer
         out_enc = out_enc.flatten(start_dim=1)
         out_enc = self.linear(out_enc)
-        out_enc = self.activation(out_enc)
         #out_enc = self.predictor(out_enc)
         return out_enc
 
@@ -662,13 +645,14 @@ class WRAPPER(torch.nn.Module):
         self.n_in = n_in
         self.n_out = n_out
         if self.n_per_hidden_layer is None:
-            self.layers = nn.Linear(n_in, n_out)
+            self.layers = nn.Sequential(*[self.activation, 
+            nn.Linear(n_in, n_out)])
         else:
             assert isinstance(self.n_per_hidden_layer, list), "Need a list of dimension"
             self.layers = self.create_layers()
     
     def create_layers(self):
-        layers = []
+        layers = [self.activation]
         n_prev = self.n_in
         for n_hidden in self.n_per_hidden_layer:
             layers.append(nn.Linear(in_features=n_prev, out_features=n_hidden))

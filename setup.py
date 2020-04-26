@@ -31,8 +31,7 @@ lineartransform_config = (
     None,
 )
 
-transformer_config = {'d_model': 128,
-                      'nhead': 4,
+transformer_config = {'nhead': 2,
                       'num_layers': 4
                       }
 #======================================================
@@ -52,9 +51,9 @@ lineartransform_args = dict(n_in_decoder=128,
                             window_size=8)
 
 transformer_args = dict(n_in_decoder=128+6,
-                        n_out_decoder=128+6,
+                        n_out_decoder=128,
                         hidden_configuration_decoder=transformer_config,
-                        window_size=None)
+                        window_size=8)
 #========================================================
 # Shortcuts for our models
 models_names = {'LINEARTransform': models.LINEARTransform,
@@ -71,8 +70,9 @@ configs = {'LINEARTransform': lineartransform_config,
 
 stored_args = {'LINEARTransform': lineartransform_args,
                'ENCDEC': encdec_args,
-               'TRANSFORMER': transformer_config,
+               'TRANSFORMER': transformer_args,
                'CNNEncoder': encoder_args}
+
 
 def add_model_parser(parser):
 

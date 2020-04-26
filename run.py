@@ -364,9 +364,9 @@ def main(args):
     test_loader = torch.utils.data.DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
 
     # Create model
-    wrapper_args = {'n_in': 128, 'n_out': 2, 'n_per_hidden_layer': None}
-    if args.target_intensity:
-        wrapper_args['n_out'] = 1
+    n_out = 1 if args.target_intensity else 2
+    wrapper_args = {'n_in': 128, 'n_out': n_out, 'n_per_hidden_layer': None}
+    print(wrapper_args)
     model = setup.create_model(args.encoder_name, 
                             args.decoder_name, 
                             wrapper_args, 
