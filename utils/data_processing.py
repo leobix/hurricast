@@ -14,7 +14,7 @@ device = torch.device("cpu")
 
 #allows to keep only specific columns
 def select_data(data):
-    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']]#, 'STORM_DIR', 'BASIN', 'NATURE']]
+    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]#, 'BASIN', 'NATURE']]
 
 #convert columns to numeric values
 #and interpolate missing values
@@ -79,7 +79,7 @@ def sust_wind_to_cat_val(wind):
     elif wind <=112.: cat=4
     elif wind <=136.: cat=5    
     elif wind > 136. : cat=6
-    else: cat = 0  
+    else: cat = 7
 
     return cat
 
@@ -372,8 +372,8 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     df0 = select_data(data)
     # transform data from String to numeric
     df0 = numeric_data(df0)
-    df0 = df0[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES']]
-
+    df0 = df0[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+    df0 = add_storm_category_val(df0)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     # pad the trajectories to a fix length
