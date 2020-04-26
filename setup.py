@@ -77,6 +77,9 @@ def add_model_parser(parser):
     parser.add_argument('--target_intensity',
                         action="store_true",
                         help='Predict intensity (windspeed) instead of displacement if enabled')
+    parser.add_argument('--target_intensity_cat',
+                        action="store_true",
+                        help='Predict intensity category (windspeed) instead of displacement if enabled')
     parser.add_argument('--encdec',
                         action="store_true",
                         help='Decide if ENCDEC')
