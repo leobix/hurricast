@@ -250,7 +250,7 @@ def eval(model,
     try:
         preds['d'] = torch.norm(preds['d'], p=2, dim=1)
         log = "Distribution of predictions (displacement)"
-        writer.add_histogram(log, preds , global_step=epoch_number)
+        writer.add_histogram(log, preds['d'] , global_step=epoch_number)
     except:
         log = "Distribution of predictions (intensity)"
         writer.add_histogram(log, preds['i'], global_step=epoch_number)
