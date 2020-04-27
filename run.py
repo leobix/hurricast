@@ -168,9 +168,11 @@ class Prepro:
         #Split the tensors into train/test
         len_ = data_tensors[0].size(0)
         #Get randon test indices
-        test_idx = np.random.choice(range(len_), int((1 - obj.split) * len_), replace=False) 
+        #test_idx = np.random.choice(range(len_), int((1 - obj.split) * len_), replace=False)
+        train_idx = np.arange(int(len_*obj.split))
         #Corresponding train indices
-        train_idx = np.delete(np.arange(len_), test_idx )
+        test_idx = np.delete(np.arange(len_), train_idx)
+        #train_idx = np.delete(np.arange(len_), test_idx )
         #Select tensors
         train_tensors = list(map(
             lambda x: x.index_select(
