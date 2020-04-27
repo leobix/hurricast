@@ -78,14 +78,16 @@ class Prepro:
 
         target_displacement = self.y[:, window_size:].unfold(1, predict_at, 1)#.sum(axis=-1) 
         target_intensity = self.y[:, (predict_at + window_size)-1:]
+        #here as a baseline, we take the last category to be the category in predict_at
+        target_intensity_cat_baseline = self.y[:, (window_size-1):(-predict_at)]
         #Permute: Put the last dimension on axis=2: (..., ..., 8, ...,...
         X_vision = X_vision.permute(0, 1, 6, 2, 3, 4, 5) 
         X_stat = X_stat.permute(0, 1, 3, 2)  
         target_displacement = target_displacement.permute(0, 1, 3, 2)
         #N_ouragans, N_unrolled, ... --> N_ouragans x N_unrolled
         X_vision, X_stat, \
-            target_displacement, target_intensity= map(lambda x: x.flatten(
-                end_dim=1), (X_vision, X_stat, target_displacement, target_intensity))  # Flatten everything
+            target_displacement, target_intensity, target_intensity_cat_baseline = map(lambda x: x.flatten(
+                end_dim=1), (X_vision, X_stat, target_displacement, target_intensity, target_intensity_cat_baseline))  # Flatten everything
 
         #Resize X_vision
         X_vision = X_vision.flatten(start_dim=2, end_dim=3)
@@ -100,19 +102,23 @@ class Prepro:
         tgt_intensity_cat = torch.select(target_intensity,
                                      dim=-1,
                                      index=-3).type(torch.LongTensor)
+        tgt_intensity_cat_baseline = torch.select(target_intensity_cat_baseline,
+                                         dim=-1,
+                                         index=-3).type(torch.LongTensor)
         
         train_data = dict(X_vision=X_vision.float(),
                                X_stat=X_stat.float(),
                                target_displacement=tgt_displacement,
                                target_intensity=tgt_intensity,
-                               target_intensity_cat = tgt_intensity_cat)
+                               target_intensity_cat = tgt_intensity_cat,
+                               target_intensity_cat_baseline = tgt_intensity_cat_baseline)
         print("New dataset and corresponding sizes (null elements included):")
 
         for k, v in train_data.items():
             print(k, v.size())
         return train_data
 
-    def remove_zeros(self, x_viz, x_stat, tgt_displacement, tgt_velocity, tgt_intensity_cat):
+    def remove_zeros(self, x_viz, x_stat, tgt_displacement, tgt_velocity, tgt_intensity_cat, tgt_intensity_cat_baseline):
         """
         - Remove zeros based on the values on tgt_displacement.
         - Reshape tgt_displacement as a sum over the window.
@@ -137,11 +143,11 @@ class Prepro:
         tgt_displacement = tgt_displacement[good_indices]
         tgt_velocity = tgt_velocity[good_indices]
         tgt_intensity_cat = tgt_intensity_cat[good_indices]
-
+        tgt_intensity_cat_baseline = tgt_intensity_cat_baseline[good_indices]
         print('Reshaping the displacement target...')
         tgt_displacement = tgt_displacement.sum(axis=1)  # (N', 2)
 
-        return x_viz, x_stat, tgt_intensity_cat, tgt_displacement, tgt_velocity
+        return x_viz, x_stat, tgt_intensity_cat, tgt_intensity_cat_baseline, tgt_displacement, tgt_velocity
 
     def get_mean_std(self, X_vision):
         m = torch.mean(
@@ -265,9 +271,9 @@ def eval(model,
     # train model
     total_loss = 0.
     total_n_eval = 0.
-    accuracy = 0.
-    f1_micro = 0.
-    f1_macro = 0.
+    accuracy, accuracy_baseline = 0., 0.
+    f1_micro, f1_micro_baseline = 0., 0.
+    f1_macro, f1_macro_baseline = 0., 0.
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
     tgts = {'d': [], 'i': [] } #Get a dict of lists for tensorboard
     preds = {'i': [] } if args.target_intensity else {'d': [] }
@@ -275,7 +281,7 @@ def eval(model,
         #Put data on GPU
         data_batch = tuple(map(lambda x: x.to(device), 
                                     data_batch))
-        x_viz, x_stat, tgt_intensity_cat, tgt_displacement, tgt_intensity = data_batch
+        x_viz, x_stat, tgt_intensity_cat, tgt_intensity_cat_baseline, tgt_displacement, tgt_intensity = data_batch
         with torch.no_grad():
             model_outputs = model(x_viz, x_stat)
             if target_intensity:
@@ -295,6 +301,9 @@ def eval(model,
                 accuracy += accuracy_score(target, class_pred)
                 f1_micro += f1_score(target, class_pred, average='micro')
                 f1_macro += f1_score(target, class_pred, average='macro')
+                accuracy_baseline += accuracy_score(target, tgt_intensity_cat_baseline)
+                f1_micro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='micro')
+                f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='macro')
 
             #Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
@@ -334,6 +343,15 @@ def eval(model,
         writer.add_scalar('f1_macro_eval',
                           f1_macro.item()/len(loop),
                           epoch_number)
+        writer.add_scalar('accuracy_eval_baseline',
+                          accuracy_baseline.item() / len(loop),
+                          epoch_number)
+        writer.add_scalar('f1_micro_eval_baseline',
+                          f1_micro_baseline.item() / len(loop),
+                          epoch_number)
+        writer.add_scalar('f1_macro_eval_baseline',
+                          f1_macro_baseline.item() / len(loop),
+                          epoch_number)
 
     model.train()
     return model, total_loss, total_n_eval
@@ -372,7 +390,7 @@ def train(model,
             data_batch = tuple(map(lambda x: x.to(device), 
                                     data_batch))
             x_viz, x_stat, \
-                tgt_intensity_cat, tgt_displacement, tgt_intensity = data_batch
+                tgt_intensity_cat, tgt_intensity_cat_baseline, tgt_displacement, tgt_intensity = data_batch
             optimizer.zero_grad()
 
             model_outputs = model(x_viz, x_stat)
@@ -403,8 +421,11 @@ def train(model,
                 class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1)
                 f1_micro = f1_score(target, class_pred, average='micro')
                 f1_macro = f1_score(target, class_pred, average='macro')
-                f1_all =  f1_score(target, class_pred, average = None)
+                #f1_all =  f1_score(target, class_pred, average = None)
                 accuracy = accuracy_score(target, class_pred)
+                f1_micro_baseline = f1_score(target, tgt_intensity_cat_baseline, average='micro')
+                f1_macro_baseline = f1_score(target, tgt_intensity_cat_baseline, average='macro')
+                accuracy_baseline = accuracy_score(target, tgt_intensity_cat_baseline)
                 writer.add_scalar('accuracy_train',
                               accuracy.item(),
                               epoch * len(train_loader) + i)
@@ -413,6 +434,15 @@ def train(model,
                                 epoch * len(train_loader) + i)
                 writer.add_scalar('f1_macro_train',
                                   f1_macro.item(),
+                                  epoch * len(train_loader) + i)
+                writer.add_scalar('accuracy_train_baseline',
+                                  accuracy_baseline.item(),
+                                  epoch * len(train_loader) + i)
+                writer.add_scalar('f1_micro_train_baseline',
+                                  f1_micro_baseline.item(),
+                                  epoch * len(train_loader) + i)
+                writer.add_scalar('f1_macro_train_baseline',
+                                  f1_macro_baseline.item(),
                                   epoch * len(train_loader) + i)
                 #TODO Make the log clean, there is one value of f1 for each class
                 #writer.add_histogram('f1_all_scores',
