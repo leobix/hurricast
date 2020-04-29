@@ -563,7 +563,7 @@ class ENCDEC(nn.Module):
         hidden = [torch.zeros(bs, dim) for dim in hidden_dims]
         return hidden
 
-
+'''
 class TRANSFORMER(nn.Module):
     """
 
@@ -598,7 +598,64 @@ class TRANSFORMER(nn.Module):
             out.append(self.encodercnn(x_))
         out = torch.stack(out).transpose(0, 1)
         return out#self.transformer_layers(out)
+'''
 
+class TRANSFORMER(nn.Module):
+    """
+    #TODO: Test
+    """
+
+    def __init__(self,
+                 encoder,
+                 n_in_decoder: int,
+                 n_out_transformer: int, 
+                 n_out_decoder: int,
+                 hidden_configuration_decoder: dict,
+                 window_size: int):
+        super(TRANSFORMER, self).__init__()
+        warnings.warn('Using a Transformer model without positional encoding',
+                      UserWarning)
+        self.encodercnn = encoder
+        self.n_in_decoder = n_in_decoder
+        self.n_out_decoder = n_out_decoder
+        self.window_size = window_size
+        self.config = hidden_configuration_decoder
+        
+        self.n_out_transformer = n_out_transformer
+
+
+        self.transformer_layers = self.create_transformer()
+        self.last_linear = self.create_linear()
+        
+        #Leonard: That's here for now, we'll use a wrapper later on
+        self.predictor = nn.Linear(self.n_out_transformer, 
+                                   self.n_out_decoder)
+
+    def create_transformer(self):
+        transformer_encoder_layer = nn.TransformerEncoderLayer(
+            d_model=self.n_in_decoder,
+            nhead=self.config['nhead'])
+        transformer_encoder = nn.TransformerEncoder(
+            transformer_encoder_layer,
+            num_layers=self.config['num_layers'])
+        return transformer_encoder
+
+    def create_linear(self):
+        return nn.Linear(self.window_size*self.n_in_decoder,
+                         self.n_out_transformer)
+
+    def forward(self, x_viz, x_stat):
+        #Naive way
+        out = []
+        for x_ in x_viz.unbind(1):  # Loop over the sequence
+            out.append(self.encodercnn(x_))
+        out = torch.stack(out).transpose(0, 1)
+        out = torch.cat([out, x_stat], axis=-1)
+        out = self.transformer_layers(out)
+        out = self.last_linear(out.flatten(start_dim=1))
+        #TODO: Remove it when using wrapper
+        out = self.predictor(out)
+        return out
 
 class LINEARTransform(torch.nn.Module):
     """

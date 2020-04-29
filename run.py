@@ -36,6 +36,7 @@ class Prepro:
         self.y = y[:, :, 1:]  # Remove the index
         self.y = torch.tensor(self.y.astype(np.float32))
         self.split = train_split
+        self.predict_at = predict_at
 
         #self.create_targets(predict_at, window_size)
 
@@ -86,16 +87,20 @@ class Prepro:
         target_displacement = target_displacement.permute(0, 1, 3, 2)
         #N_ouragans, N_unrolled, ... --> N_ouragans x N_unrolled
         X_vision, X_stat, \
-            target_displacement, target_intensity, target_intensity_cat_baseline = map(lambda x: x.flatten(
-                end_dim=1), (X_vision, X_stat, target_displacement, target_intensity, target_intensity_cat_baseline))  # Flatten everything
+        target_displacement, \
+        target_intensity, \
+        target_intensity_cat_baseline = map(lambda x: x.flatten(end_dim=1), 
+            (X_vision, X_stat, 
+            target_displacement, target_intensity, 
+            target_intensity_cat_baseline))  # Flatten everything
 
         #Resize X_vision
         X_vision = X_vision.flatten(start_dim=2, end_dim=3)
     
         tgt_displacement = torch.index_select(target_displacement,
                                                  dim=-1,
-                                                 index=torch.tensor([target_displacement.size(-1)-2,
-                                                                     target_displacement.size(-1)-1]))
+                                                 index=torch.tensor([4,
+                                                                     5]))
         tgt_intensity = torch.select(target_intensity,
                                        dim=-1,
                                        index=2)
@@ -110,8 +115,8 @@ class Prepro:
                                X_stat=X_stat.float(),
                                target_displacement=tgt_displacement,
                                target_intensity=tgt_intensity,
-                               target_intensity_cat = tgt_intensity_cat,
-                               target_intensity_cat_baseline = tgt_intensity_cat_baseline)
+                               target_intensity_cat=tgt_intensity_cat,
+                               target_intensity_cat_baseline=tgt_intensity_cat_baseline)
         print("New dataset and corresponding sizes (null elements included):")
 
         for k, v in train_data.items():
@@ -150,6 +155,10 @@ class Prepro:
         return x_viz, x_stat, tgt_intensity_cat, tgt_intensity_cat_baseline, tgt_displacement, tgt_velocity
 
     def get_mean_std(self, X_vision):
+        """
+        Compute the mean and std of the vision data. 
+
+        """
         m = torch.mean(
             X_vision.flatten(end_dim=1), 
                         axis=(0,-2,-1)).view(1, 1, 9, 1, 1)
@@ -190,12 +199,35 @@ class Prepro:
                 dim=0, index=torch.Tensor(test_idx).long()),
             data_tensors)
         )
+        
+        #THEO:
+        # sum over the timesteps
+        tgt_displacement_baseline = train_tensors[1][:,
+                                                        :-(obj.predict_at-1), 
+                                                        torch.tensor([4,5])].sum(axis=1)
+        m_tgb = torch.mean(tgt_displacement_baseline, axis=0)
+        s_tgb = torch.std(tgt_displacement_baseline, axis=0)
+        tgt_displacement_baseline = (tgt_displacement_baseline - m_tgb) / s_tgb
+
+        tgt_test_displacement_baseline = test_tensors[1][:,
+                                                        :-(obj.predict_at-1),
+                                                        torch.tensor([4, 5])].sum(axis=1)
+        tgt_test_displacement_baseline = (tgt_test_displacement_baseline - m_tgb) / s_tgb
+
+
         #Compute mean/std on the training set 
         m, s = obj.get_mean_std(train_tensors[0]) #Only the X_vision for now.
         train_tensors[0] = (train_tensors[0] - m)/s
         test_tensors[0] = (test_tensors[0] - m)/s
 
-        #TODO Normalize x_stat
+        #THEO: Normalize x_stat
+        #m_xstat = train_tensors[1].mean(axis=(0,1))
+        #m_xstat[7] = 0 #Dont normalize the cat
+        #s_xstat = train_tensors[1].std(axis=(0, 1))
+        #s_xstat[7] = 1 #Dont standradize the cat
+        #train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
+        #test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
+        
         #Normalize velocity target
         m_velocity = train_tensors[-1].mean()
         s_velocity = train_tensors[-1].std()
@@ -206,6 +238,10 @@ class Prepro:
         s_dis = train_tensors[-2].std(axis=0)
         train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
         test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
+        #THEO: Add the displacement baseline
+        train_tensors.insert(4,   tgt_displacement_baseline)
+        test_tensors.insert(4,  tgt_test_displacement_baseline)
+
         return train_tensors, test_tensors    
 
     
@@ -214,10 +250,10 @@ def create_loss_fn(mode='intensity'):
     Wrappers that uses same signature for all loss_functions.
     Can easily add new losses function here.
     #TODO: Théo--> See if we can make an entropy based loss.
-    
     """
     assert mode in ['displacement', 
-                    'intensity', 'intensity_cat']#, 'sum']
+                    'intensity', 
+                    'intensity_cat']#, 'sum']
     
     base_loss_fn = nn.MSELoss()
     base_classification_loss_fn = nn.CrossEntropyLoss()
@@ -242,12 +278,14 @@ def create_loss_fn(mode='intensity'):
 
     losses_fn = dict(displacement=displacement_loss, 
                     intensity=intensity_loss,
-                     intensity_cat = intensity_cat_loss)
+                     intensity_cat=intensity_cat_loss)
     return losses_fn[mode]
-    
+
+
 def create_model():
     #TODO
     raise NotImplementedError
+
 
 def assert_no_nan_no_inf(x):
     assert not torch.isnan(x).any()
@@ -264,6 +302,7 @@ def eval(model,
         device=torch.device('cpu')):
     """
     #TODO: Comment a bit    
+    #TODO: Check the eval loss working with intensity. 
     """
     # set model in training mode
     model.eval()
@@ -271,17 +310,30 @@ def eval(model,
     # train model
     total_loss = 0.
     total_n_eval = 0.
+    baseline_loss_eval = 0.
     accuracy, accuracy_baseline = 0., 0.
     f1_micro, f1_micro_baseline = 0., 0.
     f1_macro, f1_macro_baseline = 0., 0.
+    baseline_disp_eval = []
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
-    tgts = {'d': [], 'i': [] } #Get a dict of lists for tensorboard
-    preds = {'i': [] } if args.target_intensity else {'d': [] }
+    tgts = {'d': [], 'i': [], 'i_cat': [] } #Get a dict of lists for tensorboard
+    #preds = {'i': [] } if target_intensity or target_intensity_cat else {'d': [] }
+    if target_intensity:
+        preds = {'i':[]}
+    elif target_intensity_cat:
+        preds = {'i_cat': []}
+    else:
+        preds = {'d':[]}
     for data_batch in loop:
         #Put data on GPU
         data_batch = tuple(map(lambda x: x.to(device), 
                                     data_batch))
-        x_viz, x_stat, tgt_intensity_cat, tgt_intensity_cat_baseline, tgt_displacement, tgt_intensity = data_batch
+        
+        x_viz, x_stat, \
+        tgt_intensity_cat, tgt_intensity_cat_baseline,\
+        tgt_displacement_baseline, \
+        tgt_displacement, tgt_intensity = data_batch
+
         with torch.no_grad():
             model_outputs = model(x_viz, x_stat)
             if target_intensity:
@@ -293,23 +345,38 @@ def eval(model,
 
             batch_loss = loss_fn(model_outputs, tgt_displacement, tgt_intensity, tgt_intensity_cat)
             assert_no_nan_no_inf(batch_loss)
-            total_loss += batch_loss.item() #Do we divide by the size of the data
+            total_loss += batch_loss.item() * tgt_intensity.size(0) #Do we divide by the size of the data
             total_n_eval += tgt_intensity.size(0)
 
             if target_intensity_cat:
-                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1)
+                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1) #Theo: Same as torch argmax directly.
                 accuracy += accuracy_score(target, class_pred)
                 f1_micro += f1_score(target, class_pred, average='micro')
                 f1_macro += f1_score(target, class_pred, average='macro')
                 accuracy_baseline += accuracy_score(target, tgt_intensity_cat_baseline)
                 f1_micro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='micro')
                 f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='macro')
+            else:
+                if not target_intensity:
+                    baseline_loss_eval += ( tgt_displacement_baseline.size(0)*loss_fn(
+                        tgt_displacement_baseline, tgt_displacement, tgt_intensity, tgt_intensity_cat)
+                    )
+                    
+                
 
             #Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
             tgts['i'].append(tgt_intensity)
-            preds.get(tuple(preds.keys())[0]).append(model_outputs)
+            tgts['i_cat'].append(tgt_intensity_cat.float())
+            if not target_intensity_cat:
+                preds.get(tuple(preds.keys())[0]).append(model_outputs)
+            else:
+                print('cat',class_pred )
+                preds.get(tuple(preds.keys())[0]).append(class_pred.float())
+                
     
+
+    #Re-defined the losses
     tgts = { k : torch.cat(v) for k, v in tgts.items() }
     preds = { k: torch.cat(v) for k, v in preds.items()} 
     #=====================================
@@ -319,13 +386,20 @@ def eval(model,
                         tgts['d'], global_step=epoch_number)
     writer.add_histogram("Distribution of targets (intensity)",
                          tgts['i'], global_step=epoch_number)
+    writer.add_histogram("Distribution of targets (intensity cat)",
+                         tgts['i_cat'], global_step=epoch_number)
     try:
         preds['d'] = torch.norm(preds['d'], p=2, dim=1)
         log = "Distribution of predictions (displacement)"
         writer.add_histogram(log, preds['d'], global_step=epoch_number)
+
     except:
-        log = "Distribution of predictions (intensity)"
-        writer.add_histogram(log, preds['i'], global_step=epoch_number)
+        if target_intensity:
+            log = "Distribution of predictions (intensity)"
+            writer.add_histogram(log, preds['i'], global_step=epoch_number)
+        else:
+            log = "Distribution of predictions (intensity cat)"
+            writer.add_histogram(log, preds['i_cat'], global_step=epoch_number)
     
     writer.add_scalar('total_eval_loss',
                       total_loss,
@@ -352,6 +426,13 @@ def eval(model,
         writer.add_scalar('f1_macro_eval_baseline',
                           f1_macro_baseline.item() / len(loop),
                           epoch_number)
+    else:
+        if not target_intensity:
+            writer.add_scalar('baseline_disp_eval_loss',
+                              baseline_loss_eval/float(total_n_eval),
+                      epoch_number)
+            
+        
 
     model.train()
     return model, total_loss, total_n_eval
@@ -368,10 +449,11 @@ def train(model,
         scheduler=None,
         l2_reg=0., 
         device=torch.device('cpu'),
-        target_intensity = False,
-        target_intensity_cat = False):
+        target_intensity=False,
+        target_intensity_cat=False):
     """
-    #TODO: Comment a bit    
+    Train function. 
+    Expect a loss based on one of the following targest
     """
     # set model in training mode
     model.train()
@@ -388,9 +470,13 @@ def train(model,
         for i, data_batch in enumerate(inner_loop):
             #Put data on GPU
             data_batch = tuple(map(lambda x: x.to(device), 
-                                    data_batch))
-            x_viz, x_stat, \
-                tgt_intensity_cat, tgt_intensity_cat_baseline, tgt_displacement, tgt_intensity = data_batch
+                                    data_batch)) #careful because 
+            x_viz, x_stat,\
+            tgt_intensity_cat,\
+            tgt_intensity_cat_baseline,\
+            tgt_displacement_baseline,\
+            tgt_displacement, tgt_intensity = data_batch
+
             optimizer.zero_grad()
 
             model_outputs = model(x_viz, x_stat)
@@ -462,7 +548,7 @@ def train(model,
                                 writer=writer,
                                 epoch_number=epoch,
                                 target_intensity=target_intensity,
-                                target_intensity_cat = target_intensity_cat,
+                                target_intensity_cat=target_intensity_cat,
                                 device=device)
         
         if eval_loss_sample < previous_best:
@@ -516,6 +602,24 @@ def main(args):
                                 encoder=encoder,
                                 hidden_configuration_decoder=decoder_config,
                                 window_size=args.window_size)
+    #TODO:Uncomment
+    elif args.transformer:
+        #ecoder_config = setup.decoder_config
+        decoder_config = setup.transformer_config
+        if args.target_intensity_cat:
+            #7 classes of storms if categorical
+            n_out_decoder = 7
+        else:
+            # if target intensity then 1 value to predict
+            n_out_decoder = 2 - args.target_intensity
+        # n_in decoder must be out encoder + 9 because we add side features!
+        model = models.TRANSFORMER(encoder,
+                                   n_in_decoder=128+10,
+                                   n_out_transformer=128,
+                                   n_out_decoder=n_out_decoder,
+                                   hidden_configuration_decoder=decoder_config,
+                                   window_size=8)
+    
 
     else:
         model = models.LINEARTransform(encoder, args.window_size, target_intensity=args.target_intensity, \

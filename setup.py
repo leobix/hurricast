@@ -13,7 +13,7 @@ models = {
         'CNNEncoder': models.CNNEncoder, 
         'ENCDEC': models.ENCDEC, 
         'LINEARTransform': models.LINEARTransform
-        }
+}
 
 #========================================================
 # Create some configs that we'll be using frequently
@@ -32,6 +32,13 @@ decoder_config = decoder_config = (
     ('gru', 128),
     ('gru', 128)
 )
+
+transformer_config = {
+    'nhead': 2,
+    'num_layers': 4, 
+    'dropout': 0.1, #Default
+    'dim_feedforward': 2048 #Default
+}
 
 #======================================================
 
@@ -89,6 +96,10 @@ def add_model_parser(parser):
     parser.add_argument('--sgd',
                         action="store_true",
                         help='Decide if you want to use SGD over Adam')
+
+    parser.add_argument('--transformer', 
+                        action='store_true' ,
+                        help='Whether you want to use the Transformer model')
 
     return parser
 
@@ -190,11 +201,6 @@ def create_board(args, model, configs:list):
     return writer
     
 
-#def create_models(model_name, 
-#                config_name, 
-#                **model_kwargs):
-#    #TODO: Use when know the different models that we want.
-#    models[model_name)
 
 
     
