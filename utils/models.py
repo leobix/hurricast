@@ -431,6 +431,8 @@ class CNNEncoder(nn.Module):
         assert isinstance(hidden_configuration, tuple)
         self.hidden_configuration = hidden_configuration
         self.layers = self.create_cells()
+        self.init_cnn_weights()
+        self.init_lin_weights()
 
     def create_vision_cell(self, n_in, n_out):
         cell = [nn.Conv2d(in_channels=n_in,
@@ -481,9 +483,34 @@ class CNNEncoder(nn.Module):
         #TODO: Neew to reshape or something ?
         return self.layers(x)
 
-    def init_weights(self):
-        #TODO: Ask whether we need to create some init. methods really?
-        return NotImplementedError
+    def init_cnn_weights(self):
+        for idx, m in enumerate(self.modules()):
+            if isinstance(m, nn.Conv2d) and idx == 1:
+                nn.init.xavier_normal_(m.weight, gain=1)
+                nn.init.normal_(m.bias, mean=0, std=1)
+            if isinstance(m, nn.Conv2d) and idx != 1:
+                nn.init.xavier_normal_(m.weight, gain=math.sqrt(2))
+                nn.init.normal_(m.bias, mean=0, std=1)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            else:
+                pass
+
+    def init_lin_weights(self):
+        for idx, m in enumerate(self.modules()):
+            if isinstance(m, nn.BatchNorm1d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear) and idx == 1:
+                nn.init.xavier_normal_(m.weight, gain=1)
+                nn.init.normal_(m.bias, mean=0, std=1)
+            elif isinstance(m, nn.Linear) and idx != 1:
+                nn.init.xavier_normal_(m.weight, gain=math.sqrt(2))
+                nn.init.normal_(m.bias, mean=0, std=1)
+            else:
+                pass
+
 
 
 class ENCDEC(nn.Module):
@@ -657,6 +684,7 @@ class TRANSFORMER(nn.Module):
         out = self.predictor(out)
         return out
 
+
 class LINEARTransform(torch.nn.Module):
     """
     Simple Net used to debug.
@@ -676,6 +704,7 @@ class LINEARTransform(torch.nn.Module):
         else:
             self.predictor = torch.nn.Linear(128, 2)
             self.activation = torch.nn.ReLU()
+        self.init_lin_weights()
     
     def forward(self, x_viz, x_stat):
         #Apply the econder to all the elements 
@@ -687,6 +716,21 @@ class LINEARTransform(torch.nn.Module):
         out_enc = self.activation(out_enc)
         out_enc = self.predictor(out_enc)
         return out_enc
+    
+    def init_lin_weights(self):
+        for idx, m in enumerate(self.modules()):
+            if isinstance(m, nn.BatchNorm1d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear) and idx == 1:
+                nn.init.xavier_normal_(m.weight, gain=1)
+                nn.init.normal_(m.bias, mean=0, std=1)
+            elif isinstance(m, nn.Linear) and idx != 1:
+                nn.init.xavier_normal_(m.weight, gain=math.sqrt(2))
+                nn.init.normal_(m.bias, mean=0, std=1)
+            else:
+                pass
+
 
 
 if __name__ == "__main__":
