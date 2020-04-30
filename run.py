@@ -618,7 +618,7 @@ def main(args):
                                    n_out_transformer=128,
                                    n_out_decoder=n_out_decoder,
                                    hidden_configuration_decoder=decoder_config,
-                                   window_size=8)
+                                   window_size=args.window_size)
     
 
     else:
