@@ -314,7 +314,6 @@ def eval(model,
     accuracy, accuracy_baseline = 0., 0.
     f1_micro, f1_micro_baseline = 0., 0.
     f1_macro, f1_macro_baseline = 0., 0.
-    baseline_disp_eval = []
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
     tgts = {'d': [], 'i': [], 'i_cat': [] } #Get a dict of lists for tensorboard
     #preds = {'i': [] } if target_intensity or target_intensity_cat else {'d': [] }
@@ -503,8 +502,14 @@ def train(model,
             writer.add_scalar('training loss',
                               batch_loss.item(),
                               epoch * len(train_loader) + i)
+            batch_loss.backward()
+            optimizer.step()
+
             if target_intensity_cat:
-                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1)
+                #print(model_outputs)
+                #class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1)
+                class_pred = torch.argmax(model_outputs, dim=1).detach()
+                #print(class_pred)
                 f1_micro = f1_score(target, class_pred, average='micro')
                 f1_macro = f1_score(target, class_pred, average='macro')
                 #f1_all =  f1_score(target, class_pred, average = None)
@@ -534,8 +539,7 @@ def train(model,
                 #writer.add_histogram('f1_all_scores',
                                   #f1_all,
                                   #epoch * len(train_loader) + i)
-            batch_loss.backward()
-            optimizer.step()
+            
 
             if scheduler is not None:
                 scheduler.step()

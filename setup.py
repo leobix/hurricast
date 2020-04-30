@@ -37,7 +37,7 @@ transformer_config = {
     'nhead': 2,
     'num_layers': 4, 
     'dropout': 0.1, #Default
-    'dim_feedforward': 2048 #Default
+    'dim_feedforward': 512 #Default
 }
 
 #======================================================
