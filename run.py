@@ -314,6 +314,7 @@ def eval(model,
     accuracy, accuracy_baseline = 0., 0.
     f1_micro, f1_micro_baseline = 0., 0.
     f1_macro, f1_macro_baseline = 0., 0.
+    l1_loss = 0.
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
     tgts = {'d': [], 'i': [], 'i_cat': [] } #Get a dict of lists for tensorboard
     #preds = {'i': [] } if target_intensity or target_intensity_cat else {'d': [] }
@@ -360,8 +361,17 @@ def eval(model,
                     baseline_loss_eval += ( tgt_displacement_baseline.size(0)*loss_fn(
                         tgt_displacement_baseline, tgt_displacement, tgt_intensity, tgt_intensity_cat)
                     )
+                    l1_loss += (target.size(0) *
+                                torch.norm(model_outputs.detach() - target.float(),
+                                           p=1))
+                else: #target_intensity
+                    l1_loss += (tgt_intensity.size(0) * 
+                                torch.norm(model_outputs.detach() - target.float(), 
+                                p=1))
+                    #print(l1_loss)
+
+
                     
-                
 
             #Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
@@ -373,7 +383,6 @@ def eval(model,
                 print('cat',class_pred )
                 preds.get(tuple(preds.keys())[0]).append(class_pred.float())
                 
-    
 
     #Re-defined the losses
     tgts = { k : torch.cat(v) for k, v in tgts.items() }
@@ -381,6 +390,7 @@ def eval(model,
     #=====================================
     #Compute norms, duck type and add to board.
     tgts['d'] = torch.norm(tgts['d'], p=2, dim=1)
+    
     writer.add_histogram("Distribution of targets (displacement)",
                         tgts['d'], global_step=epoch_number)
     writer.add_histogram("Distribution of targets (intensity)",
@@ -396,6 +406,7 @@ def eval(model,
         if target_intensity:
             log = "Distribution of predictions (intensity)"
             writer.add_histogram(log, preds['i'], global_step=epoch_number)
+            #writer.add_scalar("")
         else:
             log = "Distribution of predictions (intensity cat)"
             writer.add_histogram(log, preds['i_cat'], global_step=epoch_number)
@@ -430,6 +441,13 @@ def eval(model,
             writer.add_scalar('baseline_disp_eval_loss',
                               baseline_loss_eval/float(total_n_eval),
                       epoch_number)
+            writer.add_scalar('l1 loss for the model(displacement)',
+                              l1_loss/float(total_n_eval), 
+                              epoch_number)
+        else:
+            writer.add_scalar('l1 loss for the model (intensity)', 
+                              l1_loss/float(total_n_eval), 
+                              epoch_number)
             
         
 
@@ -574,7 +592,9 @@ def main(args):
     #Load files and reformat.
     vision_data = np.load(osp.join(args.data_dir, args.vision_name), allow_pickle = True) #NUMPY ARRAY
     y = np.load(osp.join(args.data_dir, args.y_name), allow_pickle = True)
-   
+    #FOR DEBUGGING
+    vision_data = vision_data[:10]
+    y = y[:10]
     train_tensors, test_tensors = Prepro.process(vision_data, 
                                 y, 
                                 args.train_test_split,
