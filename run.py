@@ -314,7 +314,7 @@ def eval(model,
     accuracy, accuracy_baseline = 0., 0.
     f1_micro, f1_micro_baseline = 0., 0.
     f1_macro, f1_macro_baseline = 0., 0.
-    l1_loss = 0.
+    l1_loss, l1_loss_baseline = 0., 0.
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
     tgts = {'d': [], 'i': [], 'i_cat': [] } #Get a dict of lists for tensorboard
     #preds = {'i': [] } if target_intensity or target_intensity_cat else {'d': [] }
@@ -364,14 +364,15 @@ def eval(model,
                     l1_loss += (target.size(0) *
                                 torch.norm(model_outputs.detach() - target.float(),
                                            p=1))
+                    l1_loss_baseline += (target.size(0) *
+                    torch.norm(tgt_displacement_baseline.detach() - target.float(),
+                               p=1))
                 else: #target_intensity
                     l1_loss += (tgt_intensity.size(0) * 
                                 torch.norm(model_outputs.detach() - target.float(), 
                                 p=1))
-                    #print(l1_loss)
-
-
                     
+                    #print(l1_loss)                    
 
             #Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
@@ -441,8 +442,11 @@ def eval(model,
             writer.add_scalar('baseline_disp_eval_loss',
                               baseline_loss_eval/float(total_n_eval),
                       epoch_number)
-            writer.add_scalar('l1 loss for the model(displacement)',
+            writer.add_scalar('l1 loss for the model (displacement)',
                               l1_loss/float(total_n_eval), 
+                              epoch_number)
+            writer.add_scalar('l1 loss for the baseline (displacement)',
+                              l1_loss_baseline/float(total_n_eval), 
                               epoch_number)
         else:
             writer.add_scalar('l1 loss for the model (intensity)', 
