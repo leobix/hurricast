@@ -1,3 +1,4 @@
+utils/__pycache__
 test4.nc
 .DS_STORE
 .idea/
@@ -7,3 +8,5 @@ data_era/
 ibtracs.since1980.list.v04r00.csv
 data/
 results/
+ibtracs.since1980.list.v04r00-2020_04.csv
+since1980.csv
