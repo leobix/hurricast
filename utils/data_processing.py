@@ -14,12 +14,12 @@ device = torch.device("cpu")
 
 #allows to keep only specific columns
 def select_data(data):
-    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]#, 'BASIN', 'NATURE']]
+    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]#, 'NATURE']]
 
 #convert columns to numeric values
 #and interpolate missing values
 def numeric_data(data):
-    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']:
+    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']:
         data[i]=pd.to_numeric(data[i],errors='coerce').astype('float64')
         data[i]=data[i].interpolate(method='linear')
     return data
@@ -374,6 +374,9 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     df0 = numeric_data(df0)
     df0 = df0[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
     df0 = add_storm_category_val(df0)
+    #adding BASIN and NATURE feature as a one hot
+    df0 = add_one_hot(data, df0)
+    print('df0 columns :', df0.columns)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     # pad the trajectories to a fix length
