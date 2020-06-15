@@ -62,7 +62,7 @@ class Prepro:
         (tensors of images and tabular data).
         IN:
             param predict_at: timestep to predict at in the future
-            param window_size: number of components of a sub time-serie
+            param window_size: number of components of a sub time-series
         OUT:
             train data: dict
                 target_displacement: (N, predict_at, 2): an intermediary version where 

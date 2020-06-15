@@ -150,7 +150,7 @@ def download_all2(data):
     print("Download complete.")
 
 
-def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = './data/last3years.csv'):
+def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = './data/last3years.csv', save_path = 'data/'):
     '''
     create_dataset(30, 16, 120, 'vision_data_30_16_120_3years.npy', 'y_30_16_120_3years.npy')
     :param min_wind:
@@ -167,5 +167,5 @@ def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = '
                                         min_steps=min_steps,
                                         max_steps=max_steps,
                                         path = path)
-    np.save("data/" + vision_name, vision_data, allow_pickle=True)
-    np.save("data/" + y_name, y, allow_pickle=True)
+    np.save(save_path + vision_name, vision_data, allow_pickle=True)
+    np.save(save_path + y_name, y, allow_pickle=True)
