@@ -5,3 +5,5 @@ test4.nc
 __pycache__/
 data_era/
 ibtracs.since1980.list.v04r00.csv
+data/
+results/

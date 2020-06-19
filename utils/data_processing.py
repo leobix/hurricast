@@ -14,7 +14,7 @@ device = torch.device("cpu")
 
 #allows to keep only specific columns
 def select_data(data):
-    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']]#, 'STORM_DIR', 'BASIN', 'NATURE']]
+    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]#, 'BASIN', 'NATURE']]
 
 #convert columns to numeric values
 #and interpolate missing values
@@ -79,7 +79,7 @@ def sust_wind_to_cat_val(wind):
     elif wind <=112.: cat=4
     elif wind <=136.: cat=5    
     elif wind > 136. : cat=6
-    else: cat = 0  
+    else: cat = 7
 
     return cat
 
@@ -232,8 +232,13 @@ def add_displacement_lat_lon2(dict0):
         lst_lat = [0]
         lst_lon = [0]
         for j in range(1,len(df)):
-            d_lat = df['LAT'][j] - df['LAT'][j-1]
-            d_lon = df['LON'][j] - df['LON'][j-1]
+            lat_j, lon_j = df['LAT'][j], df['LON'][j]
+            if lat_j==0 and lon_j == 0:
+                d_lat = 0
+                d_lon = 0
+            else:
+                d_lat = df['LAT'][j] - df['LAT'][j-1]
+                d_lon = df['LON'][j] - df['LON'][j-1]
             lst_lat.append(d_lat)
             lst_lon.append(d_lon)
         df['DISPLACEMENT_LAT'] = lst_lat
@@ -286,7 +291,7 @@ def repad(t):
 
 
 
-def prepare_data(path = "/data/ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
+def prepare_data(path = "/data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
     data = pd.read_csv(path) 
     #select interesting columns
     df0 = select_data(data)
@@ -327,7 +332,7 @@ def prepare_data(path = "/data/ibtracs.last3years.list.v04r00.csv", max_wind_cha
     return t3, p_list
 
 
-def prepare_data2(path = "./data/ibtracs.last3years.list.v04r00.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
+def prepare_data2(path = "./data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
     data = pd.read_csv(path) 
     #select interesting columns
     df0 = select_data(data)
@@ -360,15 +365,15 @@ def prepare_data2(path = "./data/ibtracs.last3years.list.v04r00.csv", max_wind_c
     return t[:,2:5,:]
 
 
-def prepare_tabular_data_vision(path="./data/ibtracs.last3years.list.v04r00.csv", min_wind=50, min_steps=15,
+def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_steps=15,
                   max_steps=120, get_displacement=True):
     data = pd.read_csv(path)
     # select interesting columns
     df0 = select_data(data)
     # transform data from String to numeric
     df0 = numeric_data(df0)
-    df0 = df0[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES']]
-
+    df0 = df0[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+    df0 = add_storm_category_val(df0)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     # pad the trajectories to a fix length

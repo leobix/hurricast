@@ -28,7 +28,7 @@ def process_netcdf(filepath, param):
     return grid
 
 
-def get_storms(extraction = False, min_wind = 30, min_steps= 20, max_steps=60, path = "ibtracs.since1980.list.v04r00.csv"):
+def get_storms(extraction = False, min_wind = 30, min_steps= 20, max_steps=60, path = "since1980.csv"):
     '''
     returns an array of elements of type [datetime, lat, lon]
     set extraction to True if used for downloading data and False if used to convert netcdf files to tensor
@@ -56,14 +56,13 @@ def get_timestep_vision(time, lat, lon):
     u, v, z = process_netcdf(filepath, 'u'), process_netcdf(filepath, 'v'), process_netcdf(filepath, 'z')
     return np.array([u, v, z])
 
+
 def get_storm_vision(storm, epsilon = 0):
     '''
     given a storm (list of timesteps with time and lat/lon), returns the vision array
     epsilon is a parameter in case there is a scenario whith not correct grid size
     '''
     l = np.zeros((len(storm), 3, 3, 25, 25))
-    bad_shapes = []
-    times, lati, long = [], [], []
     for i in range(len(storm)):
         time, lat, lon = storm[i]
         try :
@@ -74,10 +73,6 @@ def get_storm_vision(storm, epsilon = 0):
                 print(b.shape)
                 print(time, lat, lon)
                 get_data(['700', '500', '225'], ['geopotential', 'u_component_of_wind', 'v_component_of_wind'], time, lat, lon, grid_size = 25, force = True, epsilon = epsilon)
-                times.append(time)
-                lati.append(lat)
-                long.append(lon)
-                bad_shapes.append(b)
             except:
                 pass
     return l
@@ -102,6 +97,8 @@ def get_filename(pressure, params, time, lat, lon):
     pressure_str = '_'.join(map(str, pressure))
     year, month, day, hour = str(time.year), str(time.month), str(time.day), str(time.hour)
     return 'data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
+
+
 
 def get_area(lat, lon, grid_size, e = 0.008):
     '''
@@ -151,3 +148,24 @@ def download_all2(data):
         i+=1
         print("Storm ", i, " completed.")
     print("Download complete.")
+
+
+def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = './data/last3years.csv'):
+    '''
+    create_dataset(30, 16, 120, 'vision_data_30_16_120_3years.npy', 'y_30_16_120_3years.npy')
+    :param min_wind:
+    :param min_steps:
+    :param max_steps:
+    :param vision_name:
+    :param y_name:
+    :param path:
+    :return: nothing but creates the datasets
+    '''
+    data = get_storms(min_wind = min_wind, min_steps = min_steps, max_steps = max_steps, path = path, extraction=True)
+    vision_data = extract_vision(data, epsilon=0.05)
+    y, _ = prepare_tabular_data_vision(min_wind=min_wind,
+                                        min_steps=min_steps,
+                                        max_steps=max_steps,
+                                        path = path)
+    np.save("data/" + vision_name, vision_data, allow_pickle=True)
+    np.save("data/" + y_name, y, allow_pickle=True)
