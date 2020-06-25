@@ -1,11 +1,5 @@
 from run import Prepro
 import numpy as np
-import matplotlib.pyplot as plt
-from xgboost import XGBClassifier
-from xgboost import XGBRegressor
-from sklearn.metrics import accuracy_score
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import mean_absolute_error
 
 ###
 train_test_split = 0.2 #how much train test data
