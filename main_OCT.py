@@ -23,6 +23,9 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument("--steps-in", type=int, default=8,
                             help="choose between 8, 12, 16")
 
+parser.add_argument("--steps-out", type=int, default=8,
+                            help="choose between 8")
+
 parser.add_argument("--min-depth", type=int, default=5,
                             help="min depth")
 
