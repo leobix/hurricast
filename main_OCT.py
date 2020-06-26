@@ -73,11 +73,15 @@ def main(args):
         names_all[i] += '_' + str(i // 22)
 
     X_train2 = pd.DataFrame(X_train)
+    X_test = pd.DataFrame(X_test)
+
     X_train2.columns = names_all
+    X_test.columns = names_all
 
     cols = [c for c in X_train2.columns if c.lower()[-1] == '0' or c.lower()[:3] != 'cat']
 
     X_train2 = X_train2[cols]
+    X_test = X_test[cols]
 
 
     grid_scenarios = iai.GridSearch(
