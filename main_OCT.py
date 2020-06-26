@@ -72,15 +72,15 @@ def main(args):
     for i in range(len(names_all)):
         names_all[i] += '_' + str(i // 22)
 
-    X_train2 = pd.DataFrame(X_train)
+    X_train = pd.DataFrame(X_train)
     X_test = pd.DataFrame(X_test)
 
-    X_train2.columns = names_all
+    X_train.columns = names_all
     X_test.columns = names_all
 
-    cols = [c for c in X_train2.columns if c.lower()[-1] == '0' or c.lower()[:3] != 'cat']
+    cols = [c for c in X_train.columns if c.lower()[-1] == '0' or c.lower()[:3] != 'cat']
 
-    X_train2 = X_train2[cols]
+    X_train = X_train[cols]
     X_test = X_test[cols]
 
 
@@ -101,7 +101,7 @@ def main(args):
         y_test = tgt_displacement_test
 
     if args.target_intensity_cat:
-        grid_scenarios.fit(X_train2, y_train)
+        grid_scenarios.fit(X_train, y_train)
         lnr_scenarios = grid_scenarios.get_learner()
         lnr_scenarios.write_html(
             "Trees/" + args.filename + "_Classification_tree_scenarios_in" + str(args.steps_in) + "_out" + str(
@@ -126,13 +126,13 @@ def main(args):
             max_depth=range(args.min_depth, args.max_depth),
         )
 
-        grid_dis_x.fit(X_train2, y_train[:,0])
+        grid_dis_x.fit(X_train, y_train[:,0])
         lnr_dis_x = grid_dis_x.get_learner()
         lnr_dis_x.write_html("Trees/" + args.filename + "_Regression_tree_dis_x_in" + str(args.steps_in) + "_out" + str(
             args.steps_out) + ".html")
         print(grid_dis_x.get_grid_results())
 
-        grid_dis_y.fit(X_train2, y_train[:,1])
+        grid_dis_y.fit(X_train, y_train[:,1])
         lnr_dis_y = grid_dis_y.get_learner()
         lnr_dis_y.write_html("Trees/" + args.filename + "_Regression_tree_dis_y_in" + str(args.steps_in) + "_out" + str(
             args.steps_out) + ".html")
