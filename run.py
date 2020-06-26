@@ -101,10 +101,10 @@ class Prepro:
                                        index=2)
         tgt_intensity_cat = torch.select(target_intensity,
                                      dim=-1,
-                                     index=-3).type(torch.LongTensor)
+                                     index=7).type(torch.LongTensor)
         tgt_intensity_cat_baseline = torch.select(target_intensity_cat_baseline,
                                          dim=-1,
-                                         index=-3).type(torch.LongTensor)
+                                         index=7).type(torch.LongTensor)
         
         train_data = dict(X_vision=X_vision.float(),
                                X_stat=X_stat.float(),
@@ -191,21 +191,21 @@ class Prepro:
             data_tensors)
         )
         #Compute mean/std on the training set 
-        m, s = obj.get_mean_std(train_tensors[0]) #Only the X_vision for now.
-        train_tensors[0] = (train_tensors[0] - m)/s
-        test_tensors[0] = (test_tensors[0] - m)/s
+        #m, s = obj.get_mean_std(train_tensors[0]) #Only the X_vision for now.
+        #train_tensors[0] = (train_tensors[0] - m)/s
+        #test_tensors[0] = (test_tensors[0] - m)/s
 
         #TODO Normalize x_stat
         #Normalize velocity target
-        m_velocity = train_tensors[-1].mean()
-        s_velocity = train_tensors[-1].std()
-        train_tensors[-1] = (train_tensors[-1] - m_velocity)/s_velocity
-        test_tensors[-1] = (test_tensors[-1] - m_velocity)/s_velocity
+        #m_velocity = train_tensors[-1].mean()
+        #s_velocity = train_tensors[-1].std()
+        #train_tensors[-1] = (train_tensors[-1] - m_velocity)/s_velocity
+        #test_tensors[-1] = (test_tensors[-1] - m_velocity)/s_velocity
         #Normalize displacement
-        m_dis =  train_tensors[-2].mean(axis=0)
-        s_dis = train_tensors[-2].std(axis=0)
-        train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
-        test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
+        #m_dis =  train_tensors[-2].mean(axis=0)
+        #s_dis = train_tensors[-2].std(axis=0)
+        #train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
+        #test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
         return train_tensors, test_tensors    
 
     
