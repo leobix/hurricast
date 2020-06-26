@@ -35,6 +35,12 @@ parser.add_argument("--class-criterion", type=str, default='misclassification',
 parser.add_argument("--filename", type=str, default='v1',
                             help="filename for Trees")
 
+parser.add_argument("--target-intensity-cat", action='store_true',
+                            help="intensity cat")
+
+parser.add_argument("--target-displacement", action='store_true',
+                            help="displacement")
+
 def main(args):
     window_size = args.steps_in
     X_train = np.load('data/X_train_stat_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle = True)
@@ -97,5 +103,6 @@ def main(args):
     print("Classification based scenarios, Accuracy: ",
           lnr_scenarios.score(X_test, y_test, criterion='misclassification'))
 
-    
-
+if __name__ == "__main__":
+    args = parser.parse_args()
+    main(args)
