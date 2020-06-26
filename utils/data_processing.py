@@ -222,6 +222,31 @@ def add_displacement_distance(dict0):
         dict1[i]=df
     return dict1
 
+
+def add_displacement_distance_km(dict0):
+    dict1={}
+    #loop over each dataframe
+    for i in dict0:
+        df=dict0[i]
+        #reset index
+        df.reset_index(inplace=True, drop=True)
+        lst_lat = [0]
+        lst_lon = [0]
+        for j in range(1,len(df)):
+            lat_j, lon_j = df['LAT'][j], df['LON'][j]
+            if lat_j==0 and lon_j == 0:
+                d_lat = 0
+                d_lon = 0
+            else:
+                d_lat = df['LAT'][j] - df['LAT'][j-1]
+                d_lon = df['LON'][j] - df['LON'][j-1]
+            lst_lat.append(d_lat)
+            lst_lon.append(d_lon)
+        df['DISPLACEMENT_LAT'] = lst_lat
+        df['DISPLACEMENT_LON'] = lst_lon
+        dict1[i]=df
+    return dict1
+
 def add_displacement_lat_lon2(dict0):
     dict1={}
     #loop over each dataframe
