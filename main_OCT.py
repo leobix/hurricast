@@ -6,10 +6,10 @@ import numpy as np
 #import matplotlib.pyplot as plt
 import pandas as pd
 #from xgboost import XGBClassifier
-#from xgboost import XGBRegressor
-#from sklearn.metrics import accuracy_score
+from xgboost import XGBRegressor
+from sklearn.metrics import accuracy_score
 #from sklearn.ensemble import RandomForestClassifier
-#from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error
 
 
 ##IAI
@@ -100,15 +100,61 @@ def main(args):
         y_train = tgt_displacement_train
         y_test = tgt_displacement_test
 
+    if args.target_intensity_cat:
+        grid_scenarios.fit(X_train2, y_train)
+        lnr_scenarios = grid_scenarios.get_learner()
+        lnr_scenarios.write_html(
+            "Trees/" + args.filename + "_Classification_tree_scenarios_in" + str(args.steps_in) + "_out" + str(
+                args.steps_out) + ".html")
+        print(grid_scenarios.get_grid_results())
+        print("Classification based scenarios, Accuracy: ",
+              lnr_scenarios.score(X_test, y_test, criterion='misclassification'))
+        print("Baseline score: ", accuracy_score(tgt_intensity_cat_test, tgt_intensity_cat_baseline_test))
 
-    grid_scenarios.fit(X_train2, y_train)
-    lnr_scenarios = grid_scenarios.get_learner()
-    lnr_scenarios.write_html(
-        "Trees/" + args.filename + "_Classification_tree_scenarios_in" + str(args.steps_in) + "_out" + str(
+    elif args.target_displacement:
+        grid_dis_x = iai.GridSearch(
+            iai.OptimalTreeRegressor(
+                random_seed=1,
+            ),
+            max_depth=range(args.min_depth, args.max_depth),
+        )
+
+        grid_dis_y = iai.GridSearch(
+            iai.OptimalTreeRegressor(
+                random_seed=1,
+            ),
+            max_depth=range(args.min_depth, args.max_depth),
+        )
+
+        grid_dis_x.fit(X_train2, y_train[:,0])
+        lnr_dis_x = grid_dis_x.get_learner()
+        lnr_dis_x.write_html("Trees/" + args.filename + "_Regression_tree_dis_x_in" + str(args.steps_in) + "_out" + str(
             args.steps_out) + ".html")
-    print(grid_scenarios.get_grid_results())
-    print("Classification based scenarios, Accuracy: ",
-          lnr_scenarios.score(X_test, y_test, criterion='misclassification'))
+        print(grid_dis_x.get_grid_results())
+
+        grid_dis_y.fit(X_train2, y_train[:,1])
+        lnr_dis_y = grid_dis_y.get_learner()
+        lnr_dis_y.write_html("Trees/" + args.filename + "_Regression_tree_dis_y_in" + str(args.steps_in) + "_out" + str(
+            args.steps_out) + ".html")
+        print(grid_dis_y.get_grid_results())
+
+        y_hat_dis_x = grid_dis_x.predict(X_test)
+        y_hat_dis_y = grid_dis_y.predict(X_test)
+
+        print("MAE dis X is: ", mean_absolute_error(y_test[:,0], y_hat_dis_x))
+        print("MAE dis Y is: ", mean_absolute_error(y_test[:,1], y_hat_dis_y))
+
+        ### XGB
+
+        xgb_x = XGBRegressor(max_depth=5, n_estimators=100)
+        xgb_y = XGBRegressor(max_depth=5, n_estimators=100)
+        xgb_x.fit(X_train, tgt_displacement_train[:, 0])
+        xgb_y.fit(X_train, tgt_displacement_train[:, 1])
+
+        yhat_XGB_x = xgb_x.predict(X_test)
+        yhat_XGB_y = xgb_y.predict(X_test)
+        print("XGB depth 5, 100 estimators, dis x score", mean_absolute_error(y_test[:, 0], yhat_XGB_x))
+        print("XGB depth 5, 100 estimators, dis y score", mean_absolute_error(y_test[:, 1], yhat_XGB_y))
 
 if __name__ == "__main__":
     args = parser.parse_args()
