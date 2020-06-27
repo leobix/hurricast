@@ -41,6 +41,9 @@ parser.add_argument("--filename", type=str, default='v1',
 parser.add_argument("--target-intensity-cat", action='store_true',
                             help="intensity cat")
 
+parser.add_argument("--target-intensity", action='store_true',
+                            help="forecast intensity ie windspeed in kn")
+
 parser.add_argument("--target-displacement", action='store_true',
                             help="displacement")
 
@@ -55,7 +58,12 @@ def main(args):
     tgt_intensity_cat_train = np.load('data/y_train_intensity_cat_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
     tgt_intensity_cat_test = np.load('data/y_test_intensity_cat_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
 
-    tgt_intensity_cat_baseline_train = np.load('data/y_train_intensity_cat_baseline_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
+    tgt_intensity_train = np.load('data/y_train_intensity_1980_50_20_90_w' + str(window_size) + '.npy',
+                                      allow_pickle=True)
+    tgt_intensity_test = np.load('data/y_test_intensity_1980_50_20_90_w' + str(window_size) + '.npy',
+                                     allow_pickle=True)
+
+    #tgt_intensity_cat_baseline_train = np.load('data/y_train_intensity_cat_baseline_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
     tgt_intensity_cat_baseline_test = np.load('data/y_test_intensity_cat_baseline_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
 
     tgt_displacement_train = np.load('data/y_train_displacement_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
@@ -83,15 +91,6 @@ def main(args):
     X_train = X_train[cols]
     X_test = X_test[cols]
 
-
-    grid_scenarios = iai.GridSearch(
-            iai.OptimalTreeClassifier(
-                random_seed=1,
-                criterion = args.class_criterion
-            ),
-            max_depth=range(args.min_depth, args.max_depth),
-        )
-
     if args.target_intensity_cat:
         y_train = tgt_intensity_cat_train
         y_test = tgt_intensity_cat_test
@@ -100,7 +99,18 @@ def main(args):
         y_train = tgt_displacement_train
         y_test = tgt_displacement_test
 
+    elif args.target_intensity:
+        y_train = tgt_intensity_train
+        y_test = tgt_intensity_test
+
     if args.target_intensity_cat:
+        grid_scenarios = iai.GridSearch(
+            iai.OptimalTreeClassifier(
+                random_seed=1,
+                criterion=args.class_criterion
+            ),
+            max_depth=range(args.min_depth, args.max_depth),
+        )
         grid_scenarios.fit(X_train, y_train)
         lnr_scenarios = grid_scenarios.get_learner()
         lnr_scenarios.write_html(
@@ -110,6 +120,24 @@ def main(args):
         print("Classification based scenarios, Accuracy: ",
               lnr_scenarios.score(X_test, y_test, criterion='misclassification'))
         print("Baseline score: ", accuracy_score(tgt_intensity_cat_test, tgt_intensity_cat_baseline_test))
+
+    elif args.target_intensity:
+        grid_intensity = iai.GridSearch(
+            iai.OptimalTreeRegressor(
+                random_seed=1,
+            ),
+            max_depth=range(args.min_depth, args.max_depth),
+        )
+
+        grid_intensity.fit(X_train, y_train)
+        lnr_intensity = grid_intensity.get_learner()
+        lnr_intensity.write_html("Trees/" + args.filename + "_Regression_tree_intensity_in" + str(args.steps_in) + "_out" + str(
+            args.steps_out) + ".html")
+        print(grid_intensity.get_grid_results())
+
+        y_hat_intensity = grid_intensity.predict(X_test)
+
+        print("MAE intensity: ", mean_absolute_error(y_test, y_hat_intensity))
 
     elif args.target_displacement:
         grid_dis_x = iai.GridSearch(

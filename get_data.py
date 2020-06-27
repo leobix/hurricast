@@ -36,3 +36,6 @@ np.save('data/y_test_displacement_1980_50_20_90_w' + str(window_size) + '.npy', 
 
 np.save('data/y_train_intensity_cat_baseline_1980_50_20_90_w' + str(window_size) + '.npy', tgt_intensity_cat_baseline_train, allow_pickle = True)
 np.save('data/y_test_intensity_cat_baseline_1980_50_20_90_w' + str(window_size) + '.npy', tgt_intensity_cat_baseline_test, allow_pickle = True)
+
+np.save('data/y_train_intensity_1980_50_20_90_w' + str(window_size) + '.npy', tgt_intensity_train, allow_pickle = True)
+np.save('data/y_test_intensity_1980_50_20_90_w' + str(window_size) + '.npy', tgt_intensity_test, allow_pickle = True)
