@@ -51,3 +51,19 @@ def viz_to_arr(tensor, reduced_ranks):
     approx_error = tl.norm(approx-tensor)/tl.norm(tensor)*100  #euclidean norm
 
     return out_arr,  approx_error
+
+
+#function intaking x_stat, x_viz and concat them according to ranks
+def concat_stat_viz(x_stat_train, x_viz_train, reduced_ranks): #third arg is vision tensor's dimensions
+    #reshape tabular data
+    X_train = x_stat_train.reshape(x_stat_train.shape[0], -1)
+
+    #compress vision data according to reduced_ranks
+    viz = np.zeros((x_viz_train.shape[0], np.prod(reduced_ranks)))
+    avg_error = 0
+    for i in range(x_viz_train.shape[0]):
+        viz[i,:], error = viz_to_arr(x_viz_train[i].numpy(), reduced_ranks)
+        avg_error += error
+#     print('average tensor approx pct error is', avg_error/x_viz_train.shape[0])
+    X_train = np.concatenate((X_train.numpy(), viz), axis=1)
+    return X_train, avg_error
