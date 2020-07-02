@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from xgboost import XGBClassifier
 from xgboost import XGBRegressor
 from sklearn.metrics import accuracy_score
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import mean_absolute_error
 import utils_tensor as utils #import local function
 
