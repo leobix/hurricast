@@ -47,19 +47,19 @@ if __name__ == "__main__":
     accuracy = pd.DataFrame(columns={})
 
     #prediction steps
-    steps_out_list= [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    steps_out_list= np.arange(2,22,2) #[2] #
 
     #max_depth
-    max_depth_list = [4,5,6]
+    max_depth_list = [4,5,6] #[5]
 
     #steps_in
-    steps_in_list = [8,12,16]
+    steps_in_list = [8,12,16] #[8]
 
     for max_depth in max_depth_list:
         for steps_in in steps_in_list:
             for steps_out in steps_out_list:
                 #run model
-                intensity_xgb_score, intensity_base_score = run_xgb(vision_data, stat_data, window_size = steps_in, predict_at = steps_out, max_depth = max_depth, reduced_ranks = [5,8,10,10])
+                intensity_xgb_score, intensity_base_score, compress_error= run_xgb(vision_data, stat_data, window_size = steps_in, predict_at = steps_out, max_depth = max_depth, reduced_ranks = [5,8,10,10])
                 #record accuracy
                 accuracy = accuracy.append({'past_n_steps': str(steps_in),
                                                   'pred_n_steps': str(steps_out),
