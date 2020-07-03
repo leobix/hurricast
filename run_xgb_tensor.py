@@ -46,7 +46,7 @@ if __name__ == "__main__":
     accuracy = pd.DataFrame(columns={})
 
     #prediction steps
-    steps_out_list= np.arange(2,22,2) #[2] #
+    steps_out_list= [2,4,6,8,10,12,14,16,18] #[2] #
 
     #max_depth
     max_depth_list = [4,5,6] #[5]
