@@ -492,32 +492,33 @@ def main(args):
     print(' Prepare the training using ', device)
     # Load files and reformat.
 
-    x_stat_train = np.load('data/X_train_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True)
-    x_stat_test = np.load('data/X_test_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True)
+    x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 22))
+    x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 22))
 
-    x_viz_train = np.load('data/X_train_vision_1980_50_20_90_w' + str(args.window_size) + '.npy',  allow_pickle = True)
-    x_viz_test = np.load('data/X_test_vision_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle = True)
+    x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_50_20_90_w' + str(args.window_size) + '.npy',  allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
+    x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
 
-    tgt_intensity_cat_train = np.load('data/y_train_intensity_cat_1980_50_20_90_w' + str(args.window_size) + '.npy',
-                                      allow_pickle=True)
-    tgt_intensity_cat_test = np.load('data/y_test_intensity_cat_1980_50_20_90_w' + str(args.window_size) + '.npy',
-                                     allow_pickle=True)
+    tgt_intensity_cat_train = torch.Tensor(np.load('data/y_train_intensity_cat_1980_50_20_90_w' + str(args.window_size) + '.npy',
+                                      allow_pickle=True))
+    tgt_intensity_cat_test = torch.Tensor(np.load('data/y_test_intensity_cat_1980_50_20_90_w' + str(args.window_size) + '.npy',
+                                     allow_pickle=True))
 
-    tgt_intensity_train = np.load('data/y_train_intensity_1980_50_20_90_w' + str(args.window_size) + '.npy',
-                                  allow_pickle=True)
-    tgt_intensity_test = np.load('data/y_test_intensity_1980_50_20_90_w' + str(args.window_size) + '.npy',
-                                 allow_pickle=True)
+    tgt_intensity_train = torch.Tensor(np.load('data/y_train_intensity_1980_50_20_90_w' + str(args.window_size) + '.npy',
+                                  allow_pickle=True))
+    tgt_intensity_test = torch.Tensor(np.load('data/y_test_intensity_1980_50_20_90_w' + str(args.window_size) + '.npy',
+                                 allow_pickle=True))
 
-    tgt_intensity_cat_baseline_train = np.load('data/y_train_intensity_cat_baseline_1980_50_20_90_w' + str(args.window_size) + '.npy',  allow_pickle = True)
-    tgt_intensity_cat_baseline_test = np.load('data/y_test_intensity_cat_baseline_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True)
+    tgt_intensity_cat_baseline_train = torch.Tensor(np.load('data/y_train_intensity_cat_baseline_1980_50_20_90_w' + str(args.window_size) + '.npy',  allow_pickle = True))
+    tgt_intensity_cat_baseline_test = torch.Tensor(np.load('data/y_test_intensity_cat_baseline_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True))
 
-    tgt_displacement_train = np.load('data/y_train_displacement_1980_50_20_90_w' + str(args.window_size) + '.npy',
-                                     allow_pickle=True)
-    tgt_displacement_test = np.load('data/y_test_displacement_1980_50_20_90_w' + str(args.window_size) + '.npy',
-                                    allow_pickle=True)
+    tgt_displacement_train = torch.Tensor(np.load('data/y_train_displacement_1980_50_20_90_w' + str(args.window_size) + '.npy',
+                                     allow_pickle=True))
+    tgt_displacement_test = torch.Tensor(np.load('data/y_test_displacement_1980_50_20_90_w' + str(args.window_size) + '.npy',
+                                    allow_pickle=True))
 
-    train_tensors = (x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train)
-    test_tensors = (x_viz_test, x_stat_test, tgt_intensity_cat_test, tgt_intensity_cat_baseline_test, tgt_displacement_test, tgt_intensity_test)
+
+    train_tensors = [x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train]
+    test_tensors = [x_viz_test, x_stat_test, tgt_intensity_cat_test, tgt_intensity_cat_baseline_test, tgt_displacement_test, tgt_intensity_test]
 
     train_ds = TensorDataset(*train_tensors)
     test_ds = TensorDataset(*test_tensors)
