@@ -45,14 +45,14 @@ n = tgt_intensity_train.shape[0]
 train = np.concatenate((fresh[:n], X_train), axis=1)
 test = np.concatenate((fresh[n:], X_test), axis=1)
 
-for i in range(3, 6)
+for i in range(3, 6):
     xgb = XGBRegressor(max_depth=i, n_estimators=100)
     xgb.fit(train, tgt_intensity_train)
     yhat = xgb.predict(test)
     print("XGB score depth", i, ": ", mean_absolute_error(tgt_intensity_test, yhat))
 
 
-for i in range(3, 6)
+for i in range(3, 6):
     xgb = XGBClassifier(max_depth=i, n_estimators=100)
     xgb.fit(train, tgt_intensity_cat_train)
     yhat = xgb.predict(test)
