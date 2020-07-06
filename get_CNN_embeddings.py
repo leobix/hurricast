@@ -319,9 +319,7 @@ def eval(model,
                 f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='macro')
 
             if target_intensity:
-                mae_batch = mean_absolute_error(target*std_intensity + mean_intensity, model_outputs*std_intensity + mean_intensity)
-                mae += mae_batch
-                print("MAE Batch /n \n", mae_batch)
+                mae += mean_absolute_error(target*std_intensity + mean_intensity, model_outputs*std_intensity + mean_intensity)
 
             # Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
@@ -356,7 +354,7 @@ def eval(model,
         writer.add_scalar('mae_eval',
                           mae_eval,
                           epoch_number)
-        print(mae_eval)
+        print("\n MAE Eval is: ", mae_eval)
 
     if target_intensity_cat:
         writer.add_scalar('accuracy_eval',
