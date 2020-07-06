@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 import tqdm
 import os
 import os.path as osp
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score, accuracy_score, mean_absolute_error
+
 
 
 class Prepro:
@@ -314,6 +315,10 @@ def eval(model,
                 f1_micro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='micro')
                 f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='macro')
 
+            if target_intensity:
+                mae = mean_absolute_error(target, model_outputs)
+                print(mae)
+
             # Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
             tgts['i'].append(tgt_intensity)
@@ -515,6 +520,12 @@ def main(args):
                                      allow_pickle=True))
     tgt_displacement_test = torch.Tensor(np.load('data/y_test_displacement_1980_50_20_90_w' + str(args.window_size) + '.npy',
                                     allow_pickle=True))
+
+    #Normalize velocity target
+    m_velocity = tgt_intensity_train.mean()
+    s_velocity = tgt_intensity_train.std()
+    tgt_intensity_train = (tgt_intensity_train - m_velocity)/s_velocity
+    tgt_intensity_test = (tgt_intensity_test - m_velocity)/s_velocity
 
 
     train_tensors = [x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train]
