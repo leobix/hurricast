@@ -350,9 +350,11 @@ def eval(model,
                       total_loss / float(total_n_eval),
                       epoch_number)
     if target_intensity:
+        mae_eval = mae.item() / len(loop) * std_intensity + mean_intensity
         writer.add_scalar('mae_eval',
-                          mae.item() / len(loop) * std_intensity + mean_intensity,
+                          mae_eval,
                           epoch_number)
+        print(mae_eval)
 
     if target_intensity_cat:
         writer.add_scalar('accuracy_eval',
