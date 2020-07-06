@@ -319,7 +319,9 @@ def eval(model,
                 f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='macro')
 
             if target_intensity:
-                mae += mean_absolute_error(target, model_outputs)
+                mae_batch = mean_absolute_error(target*std_intensity + mean_intensity, model_outputs*std_intensity + mean_intensity)
+                mae += mae_batch
+                print("MAE Batch /n \n", mae_batch)
 
             # Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
@@ -350,7 +352,7 @@ def eval(model,
                       total_loss / float(total_n_eval),
                       epoch_number)
     if target_intensity:
-        mae_eval = mae.item() / len(loop) * std_intensity + mean_intensity
+        mae_eval = mae.item() / len(loop)
         writer.add_scalar('mae_eval',
                           mae_eval,
                           epoch_number)
@@ -602,7 +604,7 @@ def main(args):
                                    args=args,
                                    writer=writer,
                                    mean_intensity=mean_intensity,
-                                   std_intensity=std_intensity
+                                   std_intensity=std_intensity,
                                    scheduler=None,
                                    l2_reg=args.l2_reg,
                                    target_intensity=args.target_intensity,
