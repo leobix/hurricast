@@ -52,6 +52,18 @@ def viz_to_arr(tensor, reduced_ranks):
 
     return out_arr,  approx_error
 
+#vision data reduce dims 
+def viz_reduce(tensors, reduced_ranks): #input: tensors, sample_size = first dimension
+    #low rank decomp
+    for i in range(tensors.shape[0]):
+        core, factors = tucker(tensor, reduced_ranks)
+    
+    #calculate approximation error
+    approx = tucker_to_tensor(core, factors)
+    approx_error = tl.norm(approx-tensor)/tl.norm(tensor)*100  #euclidean norm
+
+    return core,  approx_error
+
 
 #function intaking x_stat, x_viz and concat them according to ranks
 def concat_stat_viz(x_stat, x_viz, reduced_ranks): #third arg is vision tensor's dimensions
