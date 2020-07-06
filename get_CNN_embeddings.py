@@ -202,10 +202,10 @@ class Prepro:
 
         # TODO Normalize x_stat
         # Normalize velocity target
-        # m_velocity = train_tensors[-1].mean()
-        # s_velocity = train_tensors[-1].std()
-        # train_tensors[-1] = (train_tensors[-1] - m_velocity)/s_velocity
-        # test_tensors[-1] = (test_tensors[-1] - m_velocity)/s_velocity
+        # mean_intensity = train_tensors[-1].mean()
+        # std_intensity = train_tensors[-1].std()
+        # train_tensors[-1] = (train_tensors[-1] - mean_intensity)/std_intensity
+        # test_tensors[-1] = (test_tensors[-1] - mean_intensity)/std_intensity
         # Normalize displacement
         # m_dis =  train_tensors[-2].mean(axis=0)
         # s_dis = train_tensors[-2].std(axis=0)
@@ -269,6 +269,8 @@ def eval(model,
          test_loader,
          writer,
          epoch_number,
+         mean_intensity,
+         std_intensity,
          target_intensity=False,
          target_intensity_cat=False,
          device=torch.device('cpu')):
@@ -284,6 +286,7 @@ def eval(model,
     accuracy, accuracy_baseline = 0., 0.
     f1_micro, f1_micro_baseline = 0., 0.
     f1_macro, f1_macro_baseline = 0., 0.
+    mae = 0
     loop = tqdm.tqdm(test_loader, desc='Evaluation')
     tgts = {'d': [], 'i': []}  # Get a dict of lists for tensorboard
     preds = {'i': []} if args.target_intensity else {'d': []}
@@ -316,8 +319,7 @@ def eval(model,
                 f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='macro')
 
             if target_intensity:
-                mae = mean_absolute_error(target, model_outputs)
-                print(mae)
+                mae += mean_absolute_error(target, model_outputs)
 
             # Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
@@ -347,6 +349,11 @@ def eval(model,
     writer.add_scalar('avg_eval_loss',
                       total_loss / float(total_n_eval),
                       epoch_number)
+    if target_intensity:
+        writer.add_scalar('mae_eval',
+                          mae.item() / len(loop) * std_intensity + mean_intensity,
+                          epoch_number)
+
     if target_intensity_cat:
         writer.add_scalar('accuracy_eval',
                           accuracy.item() / len(loop),
@@ -379,6 +386,8 @@ def train(model,
           test_loader,
           args,
           writer,
+          mean_intensity,                                      
+          std_intensity,
           scheduler=None,
           l2_reg=0.,
           device=torch.device('cpu'),
@@ -475,6 +484,8 @@ def train(model,
                                       test_loader=test_loader,
                                       writer=writer,
                                       epoch_number=epoch,
+                                      mean_intensity=mean_intensity,
+                                      std_intensity=std_intensity,
                                       target_intensity=target_intensity,
                                       target_intensity_cat=target_intensity_cat,
                                       device=device)
@@ -522,10 +533,10 @@ def main(args):
                                     allow_pickle=True))
 
     #Normalize velocity target
-    m_velocity = tgt_intensity_train.mean()
-    s_velocity = tgt_intensity_train.std()
-    tgt_intensity_train = (tgt_intensity_train - m_velocity)/s_velocity
-    tgt_intensity_test = (tgt_intensity_test - m_velocity)/s_velocity
+    mean_intensity = tgt_intensity_train.mean()
+    std_intensity = tgt_intensity_train.std()
+    tgt_intensity_train = (tgt_intensity_train - mean_intensity)/std_intensity
+    tgt_intensity_test = (tgt_intensity_test - mean_intensity)/std_intensity
 
 
     train_tensors = [x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train]
@@ -588,6 +599,8 @@ def main(args):
                                    test_loader=test_loader,
                                    args=args,
                                    writer=writer,
+                                   mean_intensity=mean_intensity,
+                                   std_intensity=std_intensity
                                    scheduler=None,
                                    l2_reg=args.l2_reg,
                                    target_intensity=args.target_intensity,
