@@ -510,8 +510,8 @@ def main(args):
     print(' Prepare the training using ', device)
     # Load files and reformat.
 
-    x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 22))
-    x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 22))
+    x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 22)[:,:7])
+    x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 22)[:,:7])
 
     x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_50_20_90_w' + str(args.window_size) + '.npy',  allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
     x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_50_20_90_w' + str(args.window_size) + '.npy', allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
@@ -565,7 +565,7 @@ def main(args):
             # if target intensity then 1 value to predict
             n_out_decoder = 2 - args.target_intensity
         # n_in decoder must be out encoder + 9 because we add side features!
-        model = models.ENCDEC(n_in_decoder=128 + 10,
+        model = models.ENCDEC(n_in_decoder=128 + 7,
                               n_out_decoder=n_out_decoder,
                               encoder=encoder,
                               hidden_configuration_decoder=decoder_config,
