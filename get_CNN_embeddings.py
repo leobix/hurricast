@@ -537,12 +537,26 @@ def main(args):
     tgt_displacement_test = torch.Tensor(np.load('data/y_test_displacement_1980_50_20_90_w' + str(args.window_size) + '.npy',
                                     allow_pickle=True))
 
-    #Normalize velocity target
+    #Standardize velocity target
     mean_intensity = tgt_intensity_train.mean()
     std_intensity = tgt_intensity_train.std()
     tgt_intensity_train = (tgt_intensity_train - mean_intensity)/std_intensity
     tgt_intensity_test = (tgt_intensity_test - mean_intensity)/std_intensity
 
+    #Standardize vision data
+    means = x_viz_train.mean(dim=(0, 1, 3, 4))
+    stds = x_viz_train.std(dim=(0, 1, 3, 4))
+
+    means_stat = x_stat_train.mean(dim=(0, 1))
+    stds_stat = x_stat_train.std(dim=(0, 1))
+
+    for i in range(len(means)):
+        x_viz_train[:, :, i] = (x_viz_train[:, :, i] - means[i]) / stds[i]
+        x_viz_test[:, :, i] = (x_viz_test[:, :, i] - means[i]) / stds[i]
+
+    for i in range(len(means_stat)):
+        x_stat_train[:, :, i] = (x_stat_train[:, :, i] - means_stat[i]) / stds_stat[i]
+        x_stat_test[:, :, i] = (x_stat_test[:, :, i] - means_stat[i]) / stds_stat[i]
 
     train_tensors = [x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train]
     test_tensors = [x_viz_test, x_stat_test, tgt_intensity_cat_test, tgt_intensity_cat_baseline_test, tgt_displacement_test, tgt_intensity_test]
