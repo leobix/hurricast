@@ -310,7 +310,7 @@ def eval(model,
             total_n_eval += tgt_intensity.size(0)
 
             if target_intensity_cat:
-                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1)
+                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1).detach().numpy()
                 accuracy += accuracy_score(target, class_pred)
                 f1_micro += f1_score(target, class_pred, average='micro')
                 f1_macro += f1_score(target, class_pred, average='macro')
@@ -443,7 +443,7 @@ def train(model,
                               batch_loss.item(),
                               epoch * len(train_loader) + i)
             if target_intensity_cat:
-                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1)
+                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1).detach().numpy()
                 f1_micro = f1_score(target, class_pred, average='micro')
                 f1_macro = f1_score(target, class_pred, average='macro')
                 # f1_all =  f1_score(target, class_pred, average = None)
