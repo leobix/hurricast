@@ -357,24 +357,27 @@ def eval(model,
         print("\n MAE Eval is: ", mae_eval)
 
     if target_intensity_cat:
-        writer.add_scalar('accuracy_eval',
+        writer.add_scalar('eval_accuracy',
                           accuracy.item() / len(loop),
                           epoch_number)
-        writer.add_scalar('f1_micro_eval',
+        writer.add_scalar('eval_f1_micro',
                           f1_micro.item() / len(loop),
                           epoch_number)
-        writer.add_scalar('f1_macro_eval',
+        writer.add_scalar('eval_f1_macro',
                           f1_macro.item() / len(loop),
                           epoch_number)
-        writer.add_scalar('accuracy_eval_baseline',
+        writer.add_scalar('eval_accuracy_baseline',
                           accuracy_baseline.item() / len(loop),
                           epoch_number)
-        writer.add_scalar('f1_micro_eval_baseline',
+        writer.add_scalar('eval_f1_micro_baseline',
                           f1_micro_baseline.item() / len(loop),
                           epoch_number)
-        writer.add_scalar('f1_macro_eval_baseline',
+        writer.add_scalar('eval_f1_macro_baseline',
                           f1_macro_baseline.item() / len(loop),
                           epoch_number)
+        print("\n Accuracy Eval is: ", accuracy.item() / len(loop))
+        print("\n Accuracy Eval Baseline is: ", accuracy_baseline.item() / len(loop))
+
 
     model.train()
     return model, total_loss, total_n_eval
