@@ -340,11 +340,11 @@ def filter_keys(train_tensors: Dict[str, torch.Tensor],
     assert mode in accepted_modes, "Wrong mode chosen.\
     {} not in {}".format(mode, accepted_modes.keys())
 
-    print('INPUT', train_tensors.keys())
+    
     filtered_keys = accepted_modes[mode]
     train_tensors = _filter_keys(train_tensors, filtered_keys)
     test_tensors = _filter_keys(test_tensors, filtered_keys)
-    print('OUTPUT', train_tensors.keys())
+    
     return train_tensors, test_tensors
 
 
@@ -415,7 +415,7 @@ def create_loaders(mode: str,
                             shuffle=False, 
                             collate_fn=collate_fn)
     
-    return train_loader, test_loader, train_ds, test_ds, train_tensors, test_tensors, collate_fn
+    return train_loader, test_loader
     
 if __name__ == "__main__":
     def test():
