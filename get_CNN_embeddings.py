@@ -552,11 +552,11 @@ def main(args):
 
     #Standardize vision data
     if args.normalize:
-        maxs = x_viz_train.max(dim=(0, 1, 3, 4))
-        mins = x_viz_train.min(dim=(0, 1, 3, 4))
+        maxs = x_viz_train.permute(0,1,3,4,2).reshape(-1, 9).max(dim=0).values
+        mins = x_viz_train.permute(0,1,3,4,2).reshape(-1, 9).min(dim=0).values
 
-        maxs_stat = x_stat_train.max(dim=(0, 1))
-        mins_stat = x_stat_train.min(dim=(0, 1))
+        maxs_stat = x_stat_train.reshape(-1, 7).max(dim=0).values
+        mins_stat = x_stat_train.reshape(-1, 7).max(dim=0).values
 
         for i in range(len(maxs)):
             x_viz_train[:, :, i] = (x_viz_train[:, :, i] - mins[i]) / (maxs[i] - mins[i])
