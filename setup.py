@@ -83,9 +83,19 @@ def add_model_parser(parser):
     parser.add_argument('--encdec',
                         action="store_true",
                         help='Decide if ENCDEC')
+
     parser.add_argument('--save',
                         action="store_true",
                         help='Decide if you want to save the model')
+
+    parser.add_argument('--normalize',
+                        action="store_true",
+                        help='Decide if vision and stats weights are normalized or standardized')
+
+    parser.add_argument('--normalize_intensity',
+                        action="store_true",
+                        help='Decide if intensity target is normalized or standardized')
+
     parser.add_argument('--sgd',
                         action="store_true",
                         help='Decide if you want to use SGD over Adam')

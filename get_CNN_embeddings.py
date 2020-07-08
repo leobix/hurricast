@@ -13,207 +13,6 @@ import os
 import os.path as osp
 from sklearn.metrics import f1_score, accuracy_score, mean_absolute_error
 
-
-
-class Prepro:
-    """
-    Tensor Dataset to leverage torch utils.
-    IN:
-        param: vision_data
-        param: y
-        predict_at:
-    Example:
-    >>> train_data = run.HurricaneDS(vision_data, y, predict_at=8)
-    >>> loader = torch.utils.data.DataLoader(train_data, batch_size=10, shuffle=True)
-    >>> data_ = next(iter(loader)) --> Returns a dictionary of tensors
-
-    """
-
-    def __init__(self,
-                 vision_data,
-                 y,
-                 train_split,
-                 predict_at,
-                 window_size):
-        self.vision_data = torch.tensor(vision_data)
-        self.original_timestep = y.shape[1]
-        self.y = y[:, :, 1:]  # Remove the index
-        self.y = torch.tensor(self.y.astype(np.float32))
-        self.split = train_split
-
-        # self.create_targets(predict_at, window_size)
-
-        # self.timestep = self.train_data['X_vision'].size(1)
-
-    # TODO:Remove we don't need it actually ?
-    def clean_timesteps(self, y, convert_type=np.float32):
-        """
-        Change the 'timestep' of the statistical
-        data in order to have something that is readable
-        by torch.
-        Convert the string type into a predefined type.
-        """
-        y[:, :, 0] = np.repeat(
-            np.expand_dims(np.arange(self.original_timestep), 0),
-            self.__len__(), axis=0)
-        y = y.astype(convert_type)
-        return y
-
-    def create_targets(self, predict_at: int, window_size: int):
-        """
-        Reformat the series into sub-components.
-        Use class attributes ```vision_data``` and ```y```
-        (tensors of images and tabular data).
-        IN:
-            param predict_at: timestep to predict at in the future
-            param window_size: number of components of a sub time-series
-        OUT:
-            train data: dict
-                target_displacement: (N, predict_at, 2): an intermediary version where
-                                    zeros have not yet been remove
-                target_intensity: N,
-                X_vision
-                X_stat:
-        """
-        # Unfold
-        X_vision = self.vision_data[:, :-predict_at].unfold(1, window_size, 1)
-        X_stat = self.y[:, :-predict_at].unfold(1, window_size, 1)
-        # Targets
-
-        target_displacement = self.y[:, window_size:].unfold(1, predict_at, 1)  # .sum(axis=-1)
-        target_intensity = self.y[:, (predict_at + window_size) - 1:]
-        # here as a baseline, we take the last category to be the category in predict_at
-        target_intensity_cat_baseline = self.y[:, (window_size - 1):(-predict_at)]
-        # Permute: Put the last dimension on axis=2: (..., ..., 8, ...,...
-        X_vision = X_vision.permute(0, 1, 6, 2, 3, 4, 5)
-        X_stat = X_stat.permute(0, 1, 3, 2)
-        target_displacement = target_displacement.permute(0, 1, 3, 2)
-        # N_ouragans, N_unrolled, ... --> N_ouragans x N_unrolled
-        X_vision, X_stat, \
-        target_displacement, target_intensity, target_intensity_cat_baseline = map(lambda x: x.flatten(
-            end_dim=1), (X_vision, X_stat, target_displacement, target_intensity,
-                         target_intensity_cat_baseline))  # Flatten everything
-
-        # Resize X_vision
-        X_vision = X_vision.flatten(start_dim=2, end_dim=3)
-
-        tgt_displacement = torch.index_select(target_displacement,
-                                              dim=-1,
-                                              index=torch.tensor([target_displacement.size(-1) - 2,
-                                                                  target_displacement.size(-1) - 1]))
-        tgt_intensity = torch.select(target_intensity,
-                                     dim=-1,
-                                     index=2)
-        tgt_intensity_cat = torch.select(target_intensity,
-                                         dim=-1,
-                                         index=7).type(torch.LongTensor)
-        tgt_intensity_cat_baseline = torch.select(target_intensity_cat_baseline,
-                                                  dim=-1,
-                                                  index=7).type(torch.LongTensor)
-
-        train_data = dict(X_vision=X_vision.float(),
-                          X_stat=X_stat.float(),
-                          target_displacement=tgt_displacement,
-                          target_intensity=tgt_intensity,
-                          target_intensity_cat=tgt_intensity_cat,
-                          target_intensity_cat_baseline=tgt_intensity_cat_baseline)
-        print("New dataset and corresponding sizes (null elements included):")
-
-        for k, v in train_data.items():
-            print(k, v.size())
-        return train_data
-
-    def remove_zeros(self, x_viz, x_stat, tgt_displacement, tgt_velocity, tgt_intensity_cat,
-                     tgt_intensity_cat_baseline):
-        """
-        - Remove zeros based on the values on tgt_displacement.
-        - Reshape tgt_displacement as a sum over the window.
-        """
-        # OLD: good_indices = torch.sum(tgt_displacement == 0, axis=1) != 2
-
-        # Get the indices for which the displacement in both directions = 0
-        good_indices = (tgt_displacement == 0).sum(axis=-1) == 2  # (N, predict_at)
-
-        # Count the number of zeros in a sequence of predict_at (=8) elements
-        good_indices = good_indices.sum(axis=-1)  # (N,)
-
-        # Keep only the samples for which we have no identically nul
-        # tensors over the sequence.
-        good_indices = (good_indices == 0)  # tensor of bool (N,)
-
-        print('Keeping {} samples out of the initial {}.'.format(
-            torch.sum(good_indices).item(), len(good_indices)))
-
-        x_viz = x_viz[good_indices]
-        x_stat = x_stat[good_indices]
-        tgt_displacement = tgt_displacement[good_indices]
-        tgt_velocity = tgt_velocity[good_indices]
-        tgt_intensity_cat = tgt_intensity_cat[good_indices]
-        tgt_intensity_cat_baseline = tgt_intensity_cat_baseline[good_indices]
-        print('Reshaping the displacement target...')
-        tgt_displacement = tgt_displacement.sum(axis=1)  # (N', 2)
-
-        return x_viz, x_stat, tgt_intensity_cat, tgt_intensity_cat_baseline, tgt_displacement, tgt_velocity
-
-    def get_mean_std(self, X_vision):
-        m = torch.mean(
-            X_vision.flatten(end_dim=1),
-            axis=(0, -2, -1)).view(1, 1, 9, 1, 1)
-        s = torch.std(
-            X_vision.flatten(end_dim=1),
-            axis=(0, -2, -1)).view(1, 1, 9, 1, 1)
-
-        return m, s
-
-    def __len__(self):
-        return self.vision_data.size(0)
-
-    @staticmethod
-    def process(*args, **kwargs):
-        # TODO: Discuss whether we want to
-        #  divide the set into train/test differently.
-        obj = Prepro(*args, **kwargs)
-        data = obj.create_targets(**kwargs)
-        # Unfold the time series
-        data_tensors = obj.remove_zeros(*data.values())
-        # Split the tensors into train/test
-        len_ = data_tensors[0].size(0)
-        # Get randon test indices
-        # test_idx = np.random.choice(range(len_), int((1 - obj.split) * len_), replace=False)
-        train_idx = np.arange(int(len_ * obj.split))
-        # Corresponding train indices
-        test_idx = np.delete(np.arange(len_), train_idx)
-        # train_idx = np.delete(np.arange(len_), test_idx )
-        # Select tensors
-        train_tensors = list(map(
-            lambda x: x.index_select(
-                dim=0, index=torch.Tensor(train_idx).long()),
-            data_tensors)
-        )
-        test_tensors = list(map(
-            lambda x: x.index_select(
-                dim=0, index=torch.Tensor(test_idx).long()),
-            data_tensors)
-        )
-        # Compute mean/std on the training set
-        # m, s = obj.get_mean_std(train_tensors[0]) #Only the X_vision for now.
-        # train_tensors[0] = (train_tensors[0] - m)/s
-        # test_tensors[0] = (test_tensors[0] - m)/s
-
-        # TODO Normalize x_stat
-        # Normalize velocity target
-        # mean_intensity = train_tensors[-1].mean()
-        # std_intensity = train_tensors[-1].std()
-        # train_tensors[-1] = (train_tensors[-1] - mean_intensity)/std_intensity
-        # test_tensors[-1] = (test_tensors[-1] - mean_intensity)/std_intensity
-        # Normalize displacement
-        # m_dis =  train_tensors[-2].mean(axis=0)
-        # s_dis = train_tensors[-2].std(axis=0)
-        # train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
-        # test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
-        return train_tensors, test_tensors
-
-
 def create_loss_fn(mode='intensity'):
     """
     Wrappers that uses same signature for all loss_functions.
@@ -538,25 +337,54 @@ def main(args):
                                     allow_pickle=True))
 
     #Standardize velocity target
-    mean_intensity = tgt_intensity_train.mean()
-    std_intensity = tgt_intensity_train.std()
-    tgt_intensity_train = (tgt_intensity_train - mean_intensity)/std_intensity
-    tgt_intensity_test = (tgt_intensity_test - mean_intensity)/std_intensity
+    if args.normalize_intensity:
+        max_intensity = tgt_intensity_train.max()
+        min_intensity = tgt_intensity_train.min()
+        tgt_intensity_train = (tgt_intensity_train - min_intensity) / (max_intensity - min_intensity)
+        tgt_intensity_test = (tgt_intensity_test - min_intensity) / (max_intensity - min_intensity)
+        #not actual values but used for denormalizing and making it simpler
+        mean_intensity = min_intensity
+        std_intensity = (max_intensity - min_intensity)
+
+    else:
+        mean_intensity = tgt_intensity_train.mean()
+        std_intensity = tgt_intensity_train.std()
+        tgt_intensity_train = (tgt_intensity_train - mean_intensity)/std_intensity
+        tgt_intensity_test = (tgt_intensity_test - mean_intensity)/std_intensity
 
     #Standardize vision data
-    means = x_viz_train.mean(dim=(0, 1, 3, 4))
-    stds = x_viz_train.std(dim=(0, 1, 3, 4))
+    if args.normalize:
+        maxs = x_viz_train.permute(0,1,3,4,2).reshape(-1, 9).max(dim=0).values
+        mins = x_viz_train.permute(0,1,3,4,2).reshape(-1, 9).min(dim=0).values
 
-    means_stat = x_stat_train.mean(dim=(0, 1))
-    stds_stat = x_stat_train.std(dim=(0, 1))
+        maxs_stat = x_stat_train.reshape(-1, 7).max(dim=0).values
+        mins_stat = x_stat_train.reshape(-1, 7).min(dim=0).values
 
-    for i in range(len(means)):
-        x_viz_train[:, :, i] = (x_viz_train[:, :, i] - means[i]) / stds[i]
-        x_viz_test[:, :, i] = (x_viz_test[:, :, i] - means[i]) / stds[i]
+        print("\n maxs and mins", maxs_stat, " mins ", mins_stat)
 
-    for i in range(len(means_stat)):
-        x_stat_train[:, :, i] = (x_stat_train[:, :, i] - means_stat[i]) / stds_stat[i]
-        x_stat_test[:, :, i] = (x_stat_test[:, :, i] - means_stat[i]) / stds_stat[i]
+        for i in range(len(maxs)):
+            x_viz_train[:, :, i] = (x_viz_train[:, :, i] - mins[i]) / (maxs[i] - mins[i])
+            x_viz_test[:, :, i] = (x_viz_test[:, :, i] - mins[i]) / (maxs[i] - mins[i])
+            print("min", x_viz_train[:, :, i].max(dim=0))
+
+        for i in range(len(maxs_stat)):
+            x_stat_train[:, :, i] = (x_stat_train[:, :, i] - mins_stat[i]) / (maxs_stat[i] - mins_stat[i])
+            x_stat_test[:, :, i] = (x_stat_test[:, :, i] - mins_stat[i]) / (maxs_stat[i] - mins_stat[i])
+            print("min", x_stat_train[:, :, i].max(dim=0))
+    else:
+        means = x_viz_train.mean(dim=(0, 1, 3, 4))
+        stds = x_viz_train.std(dim=(0, 1, 3, 4))
+
+        means_stat = x_stat_train.mean(dim=(0, 1))
+        stds_stat = x_stat_train.std(dim=(0, 1))
+
+        for i in range(len(means)):
+            x_viz_train[:, :, i] = (x_viz_train[:, :, i] - means[i]) / stds[i]
+            x_viz_test[:, :, i] = (x_viz_test[:, :, i] - means[i]) / stds[i]
+
+        for i in range(len(means_stat)):
+            x_stat_train[:, :, i] = (x_stat_train[:, :, i] - means_stat[i]) / stds_stat[i]
+            x_stat_test[:, :, i] = (x_stat_test[:, :, i] - means_stat[i]) / stds_stat[i]
 
     train_tensors = [x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train]
     test_tensors = [x_viz_test, x_stat_test, tgt_intensity_cat_test, tgt_intensity_cat_baseline_test, tgt_displacement_test, tgt_intensity_test]
