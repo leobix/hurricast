@@ -543,6 +543,9 @@ def main(args):
         min_intensity = tgt_intensity_train.min()
         tgt_intensity_train = (tgt_intensity_train - min_intensity) / (max_intensity - min_intensity)
         tgt_intensity_test = (tgt_intensity_test - min_intensity) / (max_intensity - min_intensity)
+        #not actual values but used for denormalizing and making it simpler
+        mean_intensity = min_intensity
+        std_intensity = (max_intensity - min_intensity)
 
     else:
         mean_intensity = tgt_intensity_train.mean()
