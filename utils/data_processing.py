@@ -1,5 +1,5 @@
 from __future__ import print_function
-import pandas as pd 
+import pandas as pd
 
 import math
 
@@ -24,18 +24,12 @@ def numeric_data(data):
         data[i]=data[i].interpolate(method='linear')
     return data
 
-#to have one-hot encoding of basin and nature of the storm
-def add_one_hot(data, df0):
-    basin = pd.get_dummies(data['BASIN'],prefix='basin')
-    basin.drop(columns=['basin_ '], inplace = True)
-    nature = pd.get_dummies(data['NATURE'],prefix='nature')
-    nature.drop('nature_ ', axis=1, inplace = True)
-    frames = [df0, basin, nature]
-    df0 = pd.concat(frames, axis = 1)
-    print("Basin and Nature of the storm are now added and one-hot.")
-    return df0
-
-
+def smooth_day(df):
+    df['ISO_TIME'] = pd.to_datetime(df['ISO_TIME'], format= '%Y-%m-%d %H:%M:%S')
+    df['cos_day'] = np.cos(2 * np.pi * df['ISO_TIME'].dt.day / 365)
+    df['sign_day'] = 0
+    df.loc[(df['ISO_TIME'].dt.hour <=11) & (df['ISO_TIME'].dt.hour >=0),'sign_day'] = 1
+    return df
 
 #This code allows to get the maximum wind change in the last X hours.
 def get_max_change(data, time, i):
@@ -53,9 +47,6 @@ def get_max_wind_change(data, time):
     return df
 
 
-
-
-
 #to use in the future: computes the wind category
 def sust_wind_to_cat_one_hot(wind):
     # maximum sustained wind in kt (knot)
@@ -64,9 +55,9 @@ def sust_wind_to_cat_one_hot(wind):
     elif wind <=82.: cat='H1'
     elif wind <=95.: cat='H2'
     elif wind <=112.: cat='H3'
-    elif wind <=136.: cat='H4'    
+    elif wind <=136.: cat='H4'
     elif wind > 136. : cat='H5'
-    else: cat = 'nan'  
+    else: cat = 'nan'
 
     return cat
 
@@ -77,13 +68,17 @@ def sust_wind_to_cat_val(wind):
     elif wind <=82.: cat=2
     elif wind <=95.: cat=3
     elif wind <=112.: cat=4
-    elif wind <=136.: cat=5    
+    elif wind <=136.: cat=5
     elif wind > 136. : cat=6
     else: cat = 7
 
     return cat
 
-
+def add_one_hot(df, df_col, prefix):
+    dummies = pd.get_dummies(df_col, prefix=prefix)
+    df_out = pd.concat([df, dummies], axis=1)
+    print("one-hot added for ", df_col.name)
+    return df_out
 
 
 
@@ -99,28 +94,23 @@ def add_storm_category_one_hot(data):
     print("Storm category is now added and one-hot.")
     return df0
 
-def add_storm_category_val(data):
-    df = pd.DataFrame()
-    df['storm_category'] = [sust_wind_to_cat_val(data['WMO_WIND'][i]) for i in range(len(data))]
-    frames = [data, df]
-    df0 = pd.concat(frames, axis = 1)
-    #df0.drop('storm_category', axis=1)
-    return df0
-
+def add_storm_category_val(df):
+    df['storm_category'] = df['WMO_WIND'].apply(sust_wind_to_cat_val) #add storm category
+    return df
 
 
 
 
 def sort_storm(data, min_wind, min_steps = 5, max_steps = 120):
     '''function to create dictionary of storm matrices
-    arguments: 
+    arguments:
     data we want to cut
-    min_wind: the minimum wind speed to store data 
+    min_wind: the minimum wind speed to store data
     '''
     #get unique storm_id:
     SID=pd.unique(data['SID']).tolist()
     #remove empty SID
-    #if not dropna: SID.remove(' ') 
+    #if not dropna: SID.remove(' ')
     #create empty dictionary
     dict0={}
     ind = 0
@@ -157,7 +147,7 @@ def geo_diff(dict0):
         df=dict0[i]
         #reset index
         df.reset_index(inplace=True, drop=True)
-        #calculate difference from t=0 
+        #calculate difference from t=0
         df['LAT_1']= df['LAT'] - df['LAT'][0]
         df['LON_1']= df['LON'] - df['LON'][0]
         df['DIST2LAND_1']= df['DIST2LAND'] - df['DIST2LAND'][0]
@@ -179,9 +169,9 @@ def pad_traj(dict0, max_steps, nan = False):
             if nan:
                 dict1[t] = pd.concat([dict0[t], pd.DataFrame([[np.nan] * dict0[t].shape[1]]*steps2add, columns=dict0[t].columns)], ignore_index=True)
             else:
-                dict1[t] = pd.concat([dict0[t], pd.DataFrame([[0] * dict0[t].shape[1]]*steps2add, columns=dict0[t].columns)], ignore_index=True)                
+                dict1[t] = pd.concat([dict0[t], pd.DataFrame([[0] * dict0[t].shape[1]]*steps2add, columns=dict0[t].columns)], ignore_index=True)
                 #In fact it happens to be easier to make the change afterwards with repad
-                #dict1[t] = pd.concat([dict0[t], pd.DataFrame([dict0[t].tail(1)]*steps2add, columns=dict0[t].columns)], ignore_index=True)                       
+                #dict1[t] = pd.concat([dict0[t], pd.DataFrame([dict0[t].tail(1)]*steps2add, columns=dict0[t].columns)], ignore_index=True)
         else:
             dict1[t] = dict0[t][:max_steps]
     print("The trajectories have now been padded.")
@@ -213,12 +203,12 @@ def add_displacement_distance(dict0):
         df=dict0[i]
         #reset index
         df.reset_index(inplace=True, drop=True)
-        #calculate difference from t=0 
+        #calculate difference from t=0
         df['DISPLACEMENT'] = 0
         for j in range(1,len(df)):
             d = get_distance_km(df['LON'][j-1], df['LAT'][j-1], df['LON'][j], df['LAT'][j])
             if d > 500: d=0
-            df['DISPLACEMENT'][j] = d 
+            df['DISPLACEMENT'][j] = d
         dict1[i]=df
     return dict1
 
@@ -280,10 +270,10 @@ def tensor_shape(dict0):
     #number of storms
     num_storms=len(dict0) - 1
     #number of features
-    num_features=dict0[next(iter(dict0))].shape[1]  
-    
+    num_features=dict0[next(iter(dict0))].shape[1]
+
     #to compute min and max number of steps
-    t_max = 0 #initialise 
+    t_max = 0 #initialise
     t_min = 1000
     t_hist = []
     for i in dict0:
@@ -294,14 +284,14 @@ def tensor_shape(dict0):
         if t0 < t_min:
             t_min = t0
     print("There are %s storms with %s features, and maximum number of steps is %s and minimum is %s." %(num_storms,num_features,t_max, t_min))
-    return num_storms, num_features, t_max, t_min, t_hist     
-    
+    return num_storms, num_features, t_max, t_min, t_hist
+
 #create a tensor
 def create_tensor(data, number_of_storms):
     tensor = data[1]
     for i in range(2,number_of_storms,1):
         tensor=np.dstack((tensor, data[i]))
-    #return list of features 
+    #return list of features
     p_list = data[1].columns.tolist()
     print("The tensor has now been created.")
     return tensor, p_list
@@ -317,23 +307,23 @@ def repad(t):
 
 
 def prepare_data(path = "/data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
-    data = pd.read_csv(path) 
+    data = pd.read_csv(path)
     #select interesting columns
     df0 = select_data(data)
     #transform data from String to numeric
     df0 = numeric_data(df0)
     #if dropna: df0 = df0.dropna()
     #add one_hot columns:
-    if one_hot: 
+    if one_hot:
         #add one-hot storm category
-        #df0 = add_storm_category_val(df0)   
+        #df0 = add_storm_category_val(df0)
         df0 = add_storm_category_one_hot(df0)
         #transform basin and nature of the storm into one-hot vector
         df0 = add_one_hot(data, df0)
-    if secondary: 
+    if secondary:
         #add the max-wind-change column
         df0 = get_max_wind_change(df0, max_wind_change)
-    
+
     #get a dict with the storms with a windspeed greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     #pad the trajectories to a fix length
@@ -348,7 +338,7 @@ def prepare_data(path = "/data/last3years.csv", max_wind_change = 12, min_wind =
     t, p_list = create_tensor(d, m)
     #delete id and number of the storms
     t2 = torch.Tensor(t[:,3:,:].astype('float64'))
-    #match feature list 
+    #match feature list
     p_list = p_list[3:]
     #transpose time and sample
     t3 = torch.transpose(t2,0,2)
@@ -358,23 +348,23 @@ def prepare_data(path = "/data/last3years.csv", max_wind_change = 12, min_wind =
 
 
 def prepare_data2(path = "./data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
-    data = pd.read_csv(path) 
+    data = pd.read_csv(path)
     #select interesting columns
     df0 = select_data(data)
     #transform data from String to numeric
     df0 = numeric_data(df0)
     #if dropna: df0 = df0.dropna()
     #add one_hot columns:
-    if one_hot: 
+    if one_hot:
         #add one-hot storm category
-        #df0 = add_storm_category_val(df0)   
+        #df0 = add_storm_category_val(df0)
         df0 = add_storm_category_one_hot(df0)
         #transform basin and nature of the storm into one-hot vector
         df0 = add_one_hot(data, df0)
-    if secondary: 
+    if secondary:
         #add the max-wind-change column
         df0 = get_max_wind_change(df0, max_wind_change)
-    
+
     #get a dict with the storms with a windspeed greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     #pad the trajectories to a fix length
@@ -391,16 +381,24 @@ def prepare_data2(path = "./data/last3years.csv", max_wind_change = 12, min_wind
 
 
 def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_steps=15,
-                  max_steps=120, get_displacement=True):
+                  max_steps=120, get_displacement=True, one_hot = False):
     data = pd.read_csv(path)
+    data.drop(0, axis=0, inplace=True) #drop secondary column names
     # select interesting columns
-    df0 = select_data(data)
+    df0 = data[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
     # transform data from String to numeric
     df0 = numeric_data(df0)
-    df0 = df0[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
-    df0 = add_storm_category_val(df0)
-    #adding BASIN and NATURE feature as a one hot
-    df0 = add_one_hot(data, df0)
+    # smooth cos & sign of day
+    df0 = smooth_day(df0)
+    # add wind category
+    df0['wind_category'] = df0.apply(lambda x: sust_wind_to_cat_val(x['WMO_WIND']), axis=1)
+    if one_hot:
+        #adding BASIN and NATURE feature as a one hot
+        df0 = add_one_hot(df0, data['BASIN'], 'basin')
+        df0 = add_one_hot(df0, data['NATURE'], 'basin')
+        #add category one_hot
+        df0 = add_one_hot(df0, df0['wind_category'], 'category')
+    # df0 = add_one_hot(data, df0)
     print('df0 columns :', df0.columns)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
@@ -422,4 +420,3 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
         except:
             pass
     return e[:, :, 1:], d
-
