@@ -10,13 +10,13 @@ from typing import Dict, List
 #IMPORTANT TODO.
 1. Remove the baseline from the named tensors and add a special option.
 2. Write documentation !
+3. Add argument to save the processed tensors beforehand.
 
 #Secondary TODO:
 1. Add typing (safer).
 2. Add memory buffer + pinning for the loaders (faster computation)
-
-
 """
+
 class Prepro:
     """
     Tensor Dataset to leverage torch utils.
@@ -42,9 +42,6 @@ class Prepro:
         self.split = train_split
         self.predict_at = predict_at
 
-        #self.create_targets(predict_at, window_size)
-
-        #self.timestep = self.train_data['X_vision'].size(1)
 
     #TODO:Remove we don't need it actually ?
     def clean_timesteps(self, y, convert_type=np.float32):
@@ -416,7 +413,8 @@ def create_loaders(mode: str,
                             collate_fn=collate_fn)
     
     return train_loader, test_loader
-    
+
+
 if __name__ == "__main__":
     def test():
         from dataclasses import dataclass
