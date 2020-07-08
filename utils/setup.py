@@ -7,7 +7,6 @@ import sys
 from torch.utils.tensorboard import SummaryWriter
 sys.path.append('../')
 
-
 models = {
         'TRANSFORMER': models.TRANSFORMER, 
         'CNNEncoder': models.CNNEncoder, 
@@ -155,7 +154,7 @@ def create_seeds(torch_seed=0, np_seed=2020):
 
 def create_setup():
     """
-    
+    #TODO: doc
     """
     parser = argparse.ArgumentParser()
     parser = add_model_parser(parser)

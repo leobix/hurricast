@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn 
 import math
 import warnings
-
 #===========================================
 # Encoders
 # V0
@@ -532,20 +531,20 @@ class ENCDEC(nn.Module):
             out_hidden.append(out_prev)
         return out_prev, out_hidden
 
-    def forward(self, x_img, x_stat, predict_at=8):
+    def forward(self, x_viz, x_stat, predict_at=8):
         """
         x_img: bs, timesteps
         x_stat: bs, timesteps, ....
         """
-        bs = x_img.size(0)  # batch_size to init the hidden layers
+        bs = x_viz.size(0)  # batch_size to init the hidden layers
         hidden = self.init_hidden(bs)
         #list(map(
         #        lambda n: torch.zeros(bs, n),
         #        lambdaself.hidden_config))
         outputs = []
         #List of zeros tensors
-        for t in range(x_img.size(1)):
-            x = self.encoder(torch.select(x_img, axis=1, index=t))
+        for t in range(x_viz.size(1)):
+            x = self.encoder(torch.select(x_viz, axis=1, index=t))
             #FUSION
             x = torch.cat([x, torch.select(x_stat, axis=1, index=t)],
                           axis=1)
