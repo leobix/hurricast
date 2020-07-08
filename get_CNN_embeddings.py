@@ -559,19 +559,19 @@ def main(args):
         mins = x_viz_train.permute(0,1,3,4,2).reshape(-1, 9).min(dim=0).values
 
         maxs_stat = x_stat_train.reshape(-1, 7).max(dim=0).values
-        mins_stat = x_stat_train.reshape(-1, 7).max(dim=0).values
+        mins_stat = x_stat_train.reshape(-1, 7).min(dim=0).values
 
         print("\n maxs and mins", maxs_stat, " mins ", mins_stat)
 
         for i in range(len(maxs)):
             x_viz_train[:, :, i] = (x_viz_train[:, :, i] - mins[i]) / (maxs[i] - mins[i])
             x_viz_test[:, :, i] = (x_viz_test[:, :, i] - mins[i]) / (maxs[i] - mins[i])
-            print("max", x_viz_train[:, :, i].max(dim=0))
+            print("min", x_viz_train[:, :, i].max(dim=0))
 
         for i in range(len(maxs_stat)):
             x_stat_train[:, :, i] = (x_stat_train[:, :, i] - mins_stat[i]) / (maxs_stat[i] - mins_stat[i])
             x_stat_test[:, :, i] = (x_stat_test[:, :, i] - mins_stat[i]) / (maxs_stat[i] - mins_stat[i])
-            print("max", x_stat_train[:, :, i].max(dim=0))
+            print("min", x_stat_train[:, :, i].max(dim=0))
     else:
         means = x_viz_train.mean(dim=(0, 1, 3, 4))
         stds = x_viz_train.std(dim=(0, 1, 3, 4))
