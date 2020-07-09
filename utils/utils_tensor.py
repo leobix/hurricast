@@ -52,12 +52,12 @@ def viz_to_arr(tensor, reduced_ranks):
 
     return out_arr,  approx_error
 
-#vision data reduce dims 
+#vision data reduce dims
 def viz_reduce(tensors, reduced_ranks): #input: tensors, sample_size = first dimension
     #low rank decomp
     for i in range(tensors.shape[0]):
         core, factors = tucker(tensor, reduced_ranks)
-    
+
     #calculate approximation error
     approx = tucker_to_tensor(core, factors)
     approx_error = tl.norm(approx-tensor)/tl.norm(tensor)*100  #euclidean norm
@@ -79,4 +79,5 @@ def concat_stat_viz(x_stat, x_viz, reduced_ranks): #third arg is vision tensor's
         avg_error += error
 #     print('average tensor approx pct error is', avg_error/x_viz_train.shape[0])
     x_out = np.concatenate((x_stat.numpy(), viz), axis=1)
+    avg_error = avg_error / x_viz.shape[0] 
     return x_out, avg_error
