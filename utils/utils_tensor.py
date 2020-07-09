@@ -79,5 +79,5 @@ def concat_stat_viz(x_stat, x_viz, reduced_ranks): #third arg is vision tensor's
         avg_error += error
 #     print('average tensor approx pct error is', avg_error/x_viz_train.shape[0])
     x_out = np.concatenate((x_stat.numpy(), viz), axis=1)
-    avg_error = avg_error / x_viz.shape[0] 
+    avg_error = avg_error / x_viz.shape[0]
     return x_out, avg_error

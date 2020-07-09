@@ -15,11 +15,11 @@ import argparse
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument("--steps_in", type=int, default=16,
+parser.add_argument("--steps_in_list", type=list, default=[16,24],
                             help="number of in time steps")
 parser.add_argument("--steps_out_list", type=list, default=[8, 16],
                             help="list of prediction time steps")
-parser.add_argument("--reduced_ranks_list", type=list, default= [[5,7,5,5],[10,7,10,10]],
+parser.add_argument("--reduced_ranks_list", type=list, default= [[5,7,5,5],[10,7,10,10],[15,7,10,10]],
                             help="list of reduced ranks") #past_n_steps * maps * 25 * 25
 
 def run_xgb(vision_data, stat_data, window_size, predict_at, max_depth, reduced_ranks):
@@ -110,31 +110,31 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     #steps_in
-    steps_in= args.steps_in
+    steps_in_list= args.steps_in_list
     #prediction steps
     steps_out_list= args.steps_out_list
     #max_depth
     max_depth =5
     #reduced ranks
     reduced_ranks_list = args.reduced_ranks_list
-
-    for steps_out in steps_out_list:
-        for reduced_ranks in reduced_ranks_list:
-            print('running max_depth, steps_in, steps_out:', max_depth, steps_in, steps_out)
-            #run model
-            mae_intensity, mae_dx, mae_dy, cat_score, cat_score_base, compress_error= run_xgb(vision_data, stat_data, window_size = steps_in, predict_at = steps_out, max_depth = max_depth, reduced_ranks = reduced_ranks)
-            print('mae_intensity, mae_dx, mae_dy, cat_score=:',mae_intensity, mae_dx, mae_dy, cat_score)
-            #record accuracy
-            accuracy = accuracy.append({'past_n_steps': str(steps_in),
-                                              'pred_n_steps': str(steps_out),
-                                              'max_depth': str(max_depth),
-                                              'reduced_ranks': reduced_ranks,
-                                              'mae_intensity': mae_intensity,
-                                              'mae_dx':mae_dx,
-                                              'mae_dy': mae_dy,
-                                              'intensity_cat_accu': cat_score,
-                                              'intensity_cat_accu_base': cat_score_base,
-                                              'compression_error': compress_error}, ignore_index=True) #'dx_xgb_mae':dx_xgb_mae, 'dy_xgb_mae':dy_xgb_mae
+    for steps_in in steps_in_list:
+        for steps_out in steps_out_list:
+            for reduced_ranks in reduced_ranks_list:
+                print('running max_depth, steps_in, steps_out:', max_depth, steps_in, steps_out)
+                #run model
+                mae_intensity, mae_dx, mae_dy, cat_score, cat_score_base, compress_error= run_xgb(vision_data, stat_data, window_size = steps_in, predict_at = steps_out, max_depth = max_depth, reduced_ranks = reduced_ranks)
+                print('mae_intensity, mae_dx, mae_dy, cat_score=:',mae_intensity, mae_dx, mae_dy, cat_score)
+                #record accuracy
+                accuracy = accuracy.append({'past_n_steps': str(steps_in),
+                                                  'pred_n_steps': str(steps_out),
+                                                  'max_depth': str(max_depth),
+                                                  'reduced_ranks': reduced_ranks,
+                                                  'mae_intensity': mae_intensity,
+                                                  'mae_dx':mae_dx,
+                                                  'mae_dy': mae_dy,
+                                                  'intensity_cat_accu': cat_score,
+                                                  'intensity_cat_accu_base': cat_score_base,
+                                                  'compression_error': compress_error}, ignore_index=True) #'dx_xgb_mae':dx_xgb_mae, 'dy_xgb_mae':dy_xgb_mae
 
     #output results df
     accuracy.to_csv('cluster_results/xgb_tensor_accuracy.csv', index=False)
