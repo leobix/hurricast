@@ -358,7 +358,7 @@ def create_collate_fn(keys_model: list=['x_viz', 'x_stat'],
         
         tupled_batch = list(zip(*batch))
         in_model = { k: torch.stack(v) for k, v in zip(keys_model, tupled_batch)}
-        in_loss = {keys_loss[0]: tupled_batch[-1]}
+        in_loss = {keys_loss[0]: torch.stack(tupled_batch[-1])}
         #print(in_model, in_loss)
         return in_model, in_loss
     
