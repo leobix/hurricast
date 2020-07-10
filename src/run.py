@@ -43,8 +43,8 @@ def get_predictions(model, iterator, task='classification', return_pt=True):
             true_preds.extend(y_batch['trg_y'].cpu().tolist())
     
     if return_pt:
-        preds = torch.stack(preds)
-        true_preds = torch.stack(true_preds)
+        preds = torch.Tensor(preds)
+        true_preds = torch.Tensor(true_preds)
     model.train()
     return preds, true_preds
 
