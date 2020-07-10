@@ -48,7 +48,7 @@ def get_metrics(model_outputs, target, task):
 
     """
     def get_pred(x_out):
-        if len(x_out.size()) > 2:
+        if len(x_out.size()) > 1:
             return x_out.argmax(-1)
         else:
             return x_out
@@ -67,9 +67,27 @@ def get_metrics(model_outputs, target, task):
     
     if len(model_outputs) == 0:
         return metrics
-
+    
+        
     if task == 'classification':
         class_pred = get_pred(model_outputs)
+
+        print('Sanity check')
+        print(type(model_outputs))
+        print(type(class_pred))
+
+        try:
+            print(model_outputs.size())
+        
+        except Exception as e:
+            print('PB1', e)
+
+        try:
+            print(class_pred.size())
+
+        except Exception as e:
+            print('PB2', e)
+
         metrics['f1_micro'] = sklearn.metrics.f1_score(
             y_true=target, y_pred=class_pred, average='micro')
         metrics['f1_macro'] = sklearn.metrics.f1_score(

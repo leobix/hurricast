@@ -113,10 +113,10 @@ def train_epoch(model,
         scheduler.step()
     
     inner_loop.set_description('Epoch {} | Loss {}'.format(global_step,
-                                                         epoch_loss.item()))
+                                                         epoch_loss))
     if return_pt:
-        preds = torch.stack(preds)
-        true_preds = torch.stack(true_preds)
+        preds = torch.Tensor(preds)
+        true_preds = torch.Tensor(true_preds)
 
     return model, optimizer, epoch_loss / len(train_iterator), train_losses, preds, true_preds
 

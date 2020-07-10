@@ -142,7 +142,7 @@ def update_post_train_writer(writer, args, test_metrics, hparam_metric_dict, hpa
 #MODEL UTILS
 def get_pred_fn(task='classification'):
     def _get_pred_classification(x_out):
-        if len(x_out.size()) > 2:
+        if len(x_out.size()) > 1:
             return x_out.argmax(-1)
         else:
             return x_out

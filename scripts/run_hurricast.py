@@ -17,6 +17,7 @@ modes = {
 def main(args):
     #TODO: Add the saving/data analysis functions
     task = modes[args.mode]
+    print('MODE AND TASK: {} | {}'.format(args.mode, task))
     
     train_loader, val_loader = prepro.create_loaders(
         mode=args.mode,
