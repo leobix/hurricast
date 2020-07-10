@@ -1,18 +1,13 @@
-import sys
-sys.path.append('../')
 import torch 
-import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
-import numpy as np
-import argparse
-from utils import utils_vision_data, data_processing, plot, models
-import matplotlib.pyplot as plt
 import tqdm
 import time
 import os 
-import os.path as osp
-from sklearn.metrics import f1_score, accuracy_score
+from .utils import run as urun
+import copy
+#import os.path as osp
+
 #===============================
+#TODO: Write some decorators: much cleaner
 accepted_modes = (
     'intensity',
     'displacement',
@@ -25,175 +20,22 @@ accepted_tasks = (
     'regression', 
     'classification'
 )
-
-#task: regression
-# train_loss_fn = create_loss_fn(task)
-# test_loss_fn = train_loss_fn
-# metrics_funcs = [regression_metrics]
-
-
-# task: classification
-# train_loss_fn = create_loss_fn(task)
-# test_loss_fn = accuracy_score
-# metrics_funcs = [classification_metrics]
-#================================
-# Utils
-def assert_no_nan_no_inf(x):
-    assert not torch.isnan(x).any()
-    assert not torch.isinf(x).any()
-
-
-def compute_l2(model):
-    L2 = 0.
-    for name, p in model.named_parameters():
-        if 'weight' in name:
-            L2 += (p**2).sum()
-    return L2
-
-
-def move_to_device(D:dict, device: torch.device):
-    """
-    Move a dict/list of tensors to the correct device.
-    """
-    if isinstance(D, dict):
-        return {k: (x.to(device) if isinstance(x, torch.Tensor)
-                    else x) for k, x in D.items()}
-    elif isinstance(D, list):
-        return [(x.to(device) if isinstance(x, torch.Tensor)
-                 else x) for x in D]
-    else:
-        raise TypeError('Need a dict or a list to use move_to_device')
-
-
-def elapsed_time(start_time, end_time):
-    elapse_time = end_time - start_time
-    elapsed_mins = int(elapse_time / 60)
-    elapsed_secs = int(elapse_time - (elapsed_mins * 60))
-    return elapsed_mins, elapsed_secs
-
-#=============
-# Metrics, loss fn
-def create_loss_fn(task='classification'):
-    """
-    Wrappers that uses same signature for all loss_functions.
-    Can easily add new losses function here.
-    #TODO: Théo--> See if we can make an entropy based loss.
-    """
-    assert task in ['classification',
-                    'regression'], "The\
-    prediction function needs either the classification or\
-    regression flag."
-    
-    base_loss_fn = nn.MSELoss()
-    base_classification_loss_fn = nn.CrossEntropyLoss()
-    if task == 'classification':
-        return base_loss_fn
-    else:
-        return base_classification_loss_fn
-
-
-def create_eval_loss_fn(task='classification'):
-    assert task in ['classification',
-                    'regression']
-    if task == 'classification':
-        return lambda x,y : 1 - accuracy_score(x,y)
-    else:
-        return nn.MSELoss()
-
-
-def create_eval_metrics_fn(task='classification'):
-    assert task in ['classification',
-                   'regression']
-    if task == 'classification':
-        return _classification_metrics
-    else:
-        return _regression_metrics
-
-
-def _classification_metrics(model_outputs, target):
-    """
-    Compute accuracy metrics and add to writer.
-
-    Parameters:
-    ----------
-    model_outputs: pre-softmax prediction
-    target: correct class
-
-    Out:
-    ---------
-    out: dict - contains f1_micro/macro/predicted_class and accuracy
-
-    """
-    def get_pred(x_out):
-        if len(x_out.size()) > 2:
-            return x_out.argmax(-1)
-        else:
-            return x_out
-
-    class_pred = get_pred(model_outputs)
-    f1_micro = f1_score(target, class_pred, average='micro')
-    f1_macro = f1_score(target, class_pred, average='macro')
-    accuracy = accuracy_score(target, class_pred)
-    n_tokens = len(target)
-    out = {
-        'accuracy': accuracy,
-        'class_pred': class_pred,
-        'f1_micro': f1_micro,
-        'f1_macro': f1_macro,
-        'n_tokens': n_tokens
-    }
-    return out
-
-
-def _regression_metrics(model_outputs, target):
-    """
-    Compute accuracy metrics and add to writer.
-
-    Parameters:
-    ----------
-    model_outputs: pre-softmax prediction
-    target: correct class
-
-    Out:
-    ---------
-    out: dict - contains avg L2 loss, total loss and number
-                of tokens
-    """
-    n_tokens = len(target)
-    loss_fn = nn.MSELoss()
-    avg_loss = loss_fn(model_outputs, target)
-    total_loss = n_tokens * avg_loss
-    out = {
-        'avg_loss': avg_loss,
-        'total_loss': total_loss,
-        'n_tokens': n_tokens
-    }
-    return out
-
 #===========================
 # Eval
-#NEW
-def get_predictions(model, iterator, task='classification', return_pt=True):
-    def get_pred_classification(x_out):
-        if len(x_out.size()) > 2:
-            return x_out.argmax(-1)
-        else:
-            return x_out
 
+def get_predictions(model, iterator, task='classification', return_pt=True):
+    
     assert task in ['classification', 
                     'regression'], "The\
     prediction function needs either the classification or\
     regression flag."
-
-    get_pred = get_pred_classification if task == 'classification' \
-        else lambda z: z
-    
+    get_pred = urun.get_pred_fn(task)
     device = next(model.parameters()).device
     model.eval()
     preds, true_preds = [], []
     with torch.no_grad():
         for i, batch in enumerate(iterator):
-            x_batch, y_batch = map(lambda x: move_to_device(x, device), batch)
+            x_batch, y_batch = map(lambda x: urun.move_to_device(x, device), batch)
             #x_batch = remove_trg(x_batch)
             out = model(**x_batch) 
             #(bs, N_dim)
@@ -207,40 +49,54 @@ def get_predictions(model, iterator, task='classification', return_pt=True):
     return preds, true_preds
 
 
-def evaluate(model: nn.Module, 
-            iterator:torch.utils.data.DataLoader, 
-            loss_fn: callable, 
-            metrics_funcs: callable) -> (torch.Tensor, torch.Tensor, float, dict):
+def evaluate(model,
+            iterator,
+            task,
+            loss_fn,
+            metrics_func) -> (torch.Tensor, torch.Tensor, float, dict):
     #1. Get the predictions (moved to CPU)
-    preds, true_preds = get_predictions(model, iterator, return_pt=True)
-    #2. Get list of metrics that we want
-    #out_metrics = []
-    #for metric_func in metrics_funcs:
-    #    out_metric = metric_func(preds, true_preds)
-    #    out_metrics.append(out_metric)
-    out_metrics = metric_func(preds=preds, target=true_preds)
+    preds, true_preds = get_predictions(model, iterator, task=task, return_pt=True)
+    #2.
+    out_metrics = metrics_func(preds=preds, target=true_preds)
     out_loss = loss_fn(x=preds, y=true_preds)
-    return preds, true_preds, out_loss, out_metrics
-    
+    return preds, true_preds, out_loss, out_metrics    
 #================================
 #Train
-#NEW
-def train_epoch(model, train_iterator, optimizer, loss_fn, l2_reg, clip):
+
+def train_epoch(model, 
+                train_iterator, 
+                optimizer, 
+                loss_fn, 
+                l2_reg, 
+                global_step, 
+                task=None,
+                return_pt=False,
+                clip=None, 
+                scheduler=None):
+    """
+    Loop through the data for one epoch. If task is not None, 
+    we will get the predictions on the training data.
+    """
+    if task is not None: get_pred = urun.get_pred_fn(task)
     device = next(model.parameters()).device
     model.train()
+    
     epoch_loss = 0.
     train_losses = []
-    for i, batch in enumerate(tqdm.tqdm(train_iterator, desc='Inner Training loop')):
-        x_batch, y_batch = map(lambda x: move_to_device(x, device), batch)
+    preds, true_preds = [], []
+
+    inner_loop = tqdm.tqdm(train_iterator, desc='Inner Training loop')
+    for i, batch in enumerate(inner_loop):
+        x_batch, y_batch = map(lambda x: urun.move_to_device(x, device), batch)
         optimizer.zero_grad()
         out = model(**x_batch)
-        loss = loss_fn(x=out, y=y_batch['trg_y'])
-        assert_no_nan_no_inf(loss)
+        loss = loss_fn(out, y_batch['trg_y'])
+        urun.assert_no_nan_no_inf(loss)
         #L2 REG
         if l2_reg > 0.:
-            L2 = compute_l2(model)
+            L2 = urun.compute_l2(model)
             loss += 2./y_batch['trg_y'].size(0) * l2_reg * L2
-            assert_no_nan_no_inf(loss)
+            urun.assert_no_nan_no_inf(loss)
         loss.backward()
         #Gradient clipping
         if clip is not None:
@@ -248,10 +104,23 @@ def train_epoch(model, train_iterator, optimizer, loss_fn, l2_reg, clip):
         optimizer.step()
         epoch_loss += loss.item()  # need to do that ?
         train_losses.append(loss.item())
+        
+        if task is not None:
+            preds.extend(get_pred(out.detach().cpu()).tolist())
+            true_preds.extend(y_batch['trg_y'].detach().cpu().tolist())
 
-    return model, optimizer, epoch_loss / len(train_iterator), train_losses
+    if scheduler is not None:
+        scheduler.step()
+    
+    inner_loop.set_description('Epoch {} | Loss {}'.format(global_step,
+                                                         epoch_loss.item()))
+    if return_pt:
+        preds = torch.stack(preds)
+        true_preds = torch.stack(true_preds)
 
-#NEW
+    return model, optimizer, epoch_loss / len(train_iterator), train_losses, preds, true_preds
+
+
 def train(model,
           optimizer,
           num_epochs,
@@ -262,85 +131,71 @@ def train(model,
           val_iterator,
           test_iterator,
           mode,
+          task,
+          get_training_stats=False,
           clip=None,
+          scheduler=None,
           l2_reg=0.,
           save=False,
           args={},
+          output_dir=None,
           none_idx=None,
           writer=None):
-
-    #def _create_stats():
-    #    return {
-    #        'train_losses': [], 'valid_losses': [],
-    #        'valid_accuracies': [], 'test_accuracies': [],
-    #        'train_losses_gran': [], 'valid_losses_gran': []
-    #        }
-
-    #def _update_stats(stats, train_loss,
-    #                  valid_loss, train_losses,
-    #                  valid_losses, valid_acc):
-    #    stats['train_losses'].append(train_loss)
-    #    stats['valid_losses'].append(valid_loss)
-    #    stats['train_losses_gran'].extend(train_losses)
-    #    stats['valid_losses_gran'].extend(valid_losses)
-    #    stats['valid_accuracies'].append(valid_acc)
-    #    return stats
-
-    #TODO: Double check if N_train or N_eval that we need.
-    def _update_writer(writer, epoch: int, 
-                    metrics_dict: dict,
-                    train_losses: list, 
-                    train_loss: list, valid_loss: list,
-                    labels: list, preds: list,
-                    N_train: int, N_eval: int, 
-                    mode: str):
-        
-        write_list(writer, train_losses, epoch, 'Training loss')
-        #write_list(writer, valid_losses, epoch, 'Eval loss')
-
-        write_histograms(writer, preds, labels, epoch, mode)
-
-        write_metrics(writer, metrics_dict, epoch, mode)
-
-        writer.add_scalar('Train loss (per epoch)',
-                          train_loss, epoch * N_train)
-        writer.add_scalar('Eval loss (per epoch)',
-                          valid_loss, epoch)
-        
     #======================
     #Begin train
     #stats = _create_stats()
+    all_train_metrics, all_eval_metrics = [], []
     best_valid_loss = float('inf')
+    if get_training_stats: get_training_stats = task
     model.train()
     #Train
+
     loop = tqdm.trange(num_epochs, desc='Epochs')
     start_time = time.time()
     for epoch in loop:
+        
         model, optimizer, train_loss,\
-        train_losses = train_epoch(model=model,
+        train_losses, preds, true_preds = train_epoch(
+                                    model=model,
                                     train_iterator=train_iterator,
                                     optimizer=optimizer,
                                     loss_fn=train_loss_fn,
+                                    global_step=epoch,
+                                    task=get_training_stats,
+                                    return_pt=True,
                                     l2_reg=l2_reg,
-                                    clip=clip)
+                                    clip=clip,
+                                    scheduler=scheduler)
+        
+        
+        train_metrics = metrics_fn(preds, true_preds)
+        
         #Eval: 
         preds, true_preds, \
-            valid_loss, eval_metrics = evaluate(model, val_iterator,
-                                                loss_fn=test_loss_fn,
-                                                metrics_funcs=metrics_fn)
-    
+        valid_loss, eval_metrics = evaluate(
+                                    model=model, 
+                                    iterator=val_iterator,
+                                    loss_fn=test_loss_fn,
+                                    metrics_func=metrics_fn,
+                                    task=task)
+
         end_time = time.time()
-        epoch_mins, epoch_secs = elapsed_time(start_time, end_time)
-        
+        epoch_mins, epoch_secs = urun.elapsed_time(start_time, end_time)
+    
         if valid_loss < best_valid_loss:
             if save:
-                torch.save(model.state_dict(), args.output_dir +
+                torch.save(model.state_dict(), output_dir +
                            '/model-best.pt')
             best_valid_loss = valid_loss
             best_model = copy.deepcopy(model)
+        
+        #UPDATE 
+        all_train_metrics.append(train_metrics)
+        all_eval_metrics.append(eval_metrics)
 
+        # WRITE ON BOARD WHAT WE WANT
         if writer is not None:
-            _update_writer(
+            urun.update_writer(
                     writer=writer, epoch=epoch, 
                     metrics_dict=eval_metrics,
                     train_losses=train_losses,
@@ -352,7 +207,8 @@ def train(model,
                     mode=mode)
 
         #Logging
-        print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
+        print(
+            f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
         print(
             f'\tTrain Loss: {train_loss:.4f} | Train PPL: {math.exp(train_loss):7.3f}')
         print(
@@ -362,96 +218,36 @@ def train(model,
                                                          valid_loss))
 
     #=====================================
-    # Test it
-    #model.load_state_dict(torch.load('copy_task-best.pt'))
-    #test_acc, test_correct, test_toks, \
-    #    true_preds, preds = test(
-    #        best_model, test_iterator, test_loss_fn)
-
+    #EVAL
     test_preds, test_labels, \
-            test_loss, eval_metrics = evaluate(best_model, val_iterator,
-                                                loss_fn=test_loss_fn,
-                                                metrics_funcs=metrics_fn)
+    test_loss, test_metrics = evaluate(
+                model=best_model, 
+                iterator=test_iterator,
+                loss_fn=test_loss_fn,
+                task=task,
+                metrics_func=metrics_fn)
     print(
         f'\t Final test ACC {test_loss:.3f}')
 
-    #stats['final_test_accuracy'] = test_acc
-    #if writer is not None:
-    #    utils.write_hparams(args.writer, args,
-    #                        hparam_dict=None,
-    #                        metric_dict={
-    #                            **{k: v[0] for k, v in best_class_report.items()},
-    #                            'Val_Loss': float(best_valid_loss),
-    #                            'Valid_Acc': float(best_valid_acc)})
-        #utils.write_model(args.writer, args, model, train_iterator)
-
-    return best_model, optimizer, stats
-
-
-#==============================
-#TENSORBOARD UTILS
-#NEW
-def write_histograms(writer, preds, targets, epoch_number, mode):
-    """
-    preds: (N, 1) or (N,2)
-    targets:  
-    """
-    assert mode in accepted_modes
-    if mode in ('displacement',  'baseline_displacement'):
-        targets = torch.norm(targets, p=2, dim=1)
-        preds = torch.norm(preds, p=2, dim=1)
-
-    writer.add_histogram("Distribution of targets ({})".format(mode),
-                         targets, global_step=epoch_number)
-    writer.add_histogram("Distribution of preds ({})".format(mode),
-                         preds, global_step=epoch_number)
-
-#NEW
-def write_metrics(writer, metrics_dict, global_step, mode):
-    for name, item in metrics_dict.items():
-        writer.add_scalar(name,
-                        item, 
-                        global_step)
+    #Add Final metrics to Board --> Hparams
+    if writer is not None:
+        urun.update_post_train_writer(
+            writer, args, test_metrics=test_metrics, 
+            hparam_metric_dict=test_metrics, hparam_dict=None)
+        
+    training_stats = {
+        'train_metrics': all_train_metrics, 
+        'eval_metrics': all_eval_metrics, 
+        'test_metrics': test_metrics,
+        'test_preds': test_preds,
+        'test_labels': test_labels
+        }
+    
+    return best_model, optimizer, training_stats
 
 
-def write_list(writer, loss_list, global_step, name):
-    #list -> = train_loss actually 
-    #global_sterp
-    #epoch --> needs 
-    N = len(loss_list)
-    for i, item in enumerate(loss_list):
-        try:
-            writer.add_scalar(name,
-                        item, 
-                        global_step * N + i)
-        except:
-            writer.add_scalar(name,
-                              item.item(),
-                              global_step * N + i)
 
-
-def write_hparams(writer, args, metric_dict, hparam_dict=None):    
-    hparam_list = [
-        "lr", "l2_reg",
-        "batch_size", 
-        "l2_reg", 
-        "lr", "model", "num_epochs"]
-
-    if hparam_dict is None:
-        hparam_dict = {}
-        for param in hparam_list:
-            try:
-                hparam_dict[param] = getattr(args, param)
-                #print(param, type(hparam_dict[param]), hparam_dict[param])
-            except Exception as e:
-                print('Problem', e)
-                hparam_dict[param] = 'error saving'
-    #for k, v in metric_dict.items():
-    #    print(k,v, type(v))
-    #print('HPARAM is', hparam_dict, metric_dict)
-    writer.add_hparams(hparam_dict, metric_dict)
-
-#================================
+'''
 #Old func
 #TODO: Clean Up and Remove
 def train_old(model,
@@ -824,13 +620,12 @@ def eval_old(model,
     model.train()
     return model, total_loss, total_n_eval
 
-
 if __name__ == "__main__":
     import setup
     args = setup.create_setup()
     setup.create_seeds()
     main_old(args)
-
+'''
     
 
 

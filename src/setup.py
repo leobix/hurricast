@@ -1,4 +1,3 @@
-from utils import models
 import argparse
 import json
 import torch
@@ -6,41 +5,7 @@ import numpy as np
 import sys
 from torch.utils.tensorboard import SummaryWriter
 sys.path.append('../')
-
-models = {
-        'TRANSFORMER': models.TRANSFORMER, 
-        'CNNEncoder': models.CNNEncoder, 
-        'ENCDEC': models.ENCDEC, 
-        'LINEARTransform': models.LINEARTransform
-}
-
-#========================================================
-# Create some configs that we'll be using frequently
-encoder_config = (
-    ('conv', 64),
-    ('conv', 64),
-    ('maxpool', None),
-    ('conv', 256),
-    ('maxpool', None),
-    ('flatten', 256 * 4 * 4),
-    ('linear', 256),
-    ('fc', 128)
-)
-
-decoder_config = decoder_config = (
-    ('gru', 128),
-    ('gru', 128)
-)
-
-transformer_config = {
-    'nhead': 2,
-    'num_layers': 4, 
-    'dropout': 0.1, #Default
-    'dim_feedforward': 2048 #Default
-}
-
 #======================================================
-
 def add_model_parser(parser):
 
     #parser.add_argument('--n_per_hidden_layer_conf',
@@ -80,18 +45,23 @@ def add_model_parser(parser):
                         type=int,
                         help='GPU index. Use -1 for cpu', 
                         default=-1)
+
     parser.add_argument('--target_intensity',
                         action="store_true",
                         help='Predict intensity (windspeed) instead of displacement if enabled')
+
     parser.add_argument('--target_intensity_cat',
                         action="store_true",
                         help='Predict intensity category (windspeed) instead of displacement if enabled')
+
     parser.add_argument('--encdec',
                         action="store_true",
                         help='Decide if ENCDEC')
+
     parser.add_argument('--save',
                         action="store_true",
                         help='Decide if you want to save the model')
+                        
     parser.add_argument('--sgd',
                         action="store_true",
                         help='Decide if you want to use SGD over Adam')
@@ -122,12 +92,12 @@ def add_data_parser(parser):
     parser.add_argument('--output_dir',
                             type=str,
                             help='Directory to save the results',
-                            default='./results/results_0')
+                            default='../results/results_0')
     
     parser.add_argument('--data_dir', 
                         type=str, 
                         help='Path to the director file',
-                        default='./data')
+                        default='../data')
 
     parser.add_argument('--predict_at', 
                         type=int, 
@@ -147,22 +117,46 @@ def add_data_parser(parser):
     return parser
 
 
+def add_reformat_parser(parser):
+    parser.add_argument('--mode',
+                        type=str,
+                        help='The mode/task that we want to work on. \
+                            one of intensity, displacement, etc...',
+                        default='intensity_cat')
+    
+    parser.add_argument('--get_training_stats', action='store_false')
+
+    parser.add_argument('--numpy_seed', type=int, default=2020)
+    
+    parser.add_argument('--torch_seed', type=int, default=0)
+    return parser
+
+
 def create_seeds(torch_seed=0, np_seed=2020):
     torch.manual_seed(torch_seed)
     np.random.seed(np_seed)
 
 
+def create_device(gpu_nb):
+    device = torch.device(
+        f'cuda:{gpu_nb}' if torch.cuda.is_available() and gpu_nb != -1 else 'cpu')
+    print(' Prepare the training using ', device)
+    return device
+
+
 def create_setup():
     """
-    #TODO: doc
+    Create cl parser and safe creation of the 
+    output directory.
     """
     parser = argparse.ArgumentParser()
     parser = add_model_parser(parser)
     parser = add_data_parser(parser)
+    parser = add_reformat_parser(parser)
 
     args = parser.parse_args()
     
-    #args = parser.parse_args()
+    
     import os.path as osp
     import os
 
@@ -174,7 +168,7 @@ def create_setup():
                                     now.hour,
                                     now.minute)
 
-        args.output_dir = './results/results'+now_
+        args.output_dir = '../results/results'+now_
     else:
         pass
 
@@ -183,22 +177,30 @@ def create_setup():
 
     with open(osp.join(args.output_dir, 'args.json'), 'w') as writer:
         json.dump(vars(args), writer, indent=4)
+    
+    create_seeds(
+        torch_seed=args.torch_seed, 
+        np_seed=args.numpy_seed)
+    
+    writer = create_board(args)
+
+    device = create_device(gpu_nb=args.gpu_nb)
+
+    args.device = device
+    args.writer = writer
 
     return args
 
 
-def create_board(args, model, configs:list):
+def create_board(args):
+    """
+    Create board, add model config as some text.
+    """
     writer = SummaryWriter(args.output_dir)  # Add tensorboard
-    #writer.add_hparams(hparam_dict=vars(args),
-    #                   metric_dict={'accuracy': torch.tensor(0)})
-    config_ = ""
-    for config in configs:
-        config_ += "{}\n".format(config)
     writer.add_text('Args', json.dumps(vars(args), indent=2))
-    writer.add_text('Model', json.dumps(model.__str__(), indent=4))
-    writer.add_text('Configs', config_)
     return writer
     
+
 
 
 
