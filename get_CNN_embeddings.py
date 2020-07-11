@@ -383,9 +383,9 @@ def main(args):
             x_stat_test[:, :, i] = (x_stat_test[:, :, i] - means_stat[i]) / stds_stat[i]
 
     if args.test_nostat:
-        n, t, p = x_stat_train.shape
-        x_stat_train = torch.zeros((n,t,p))
-        x_stat_test = torch.zeros((x_stat_test.shape[0], t, p))
+        n, t, _ = x_stat_train.shape
+        x_stat_train = torch.zeros((n,t,1))
+        x_stat_test = torch.zeros((x_stat_test.shape[0], t, 1))
 
     train_tensors = [x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train]
     test_tensors = [x_viz_test, x_stat_test, tgt_intensity_cat_test, tgt_intensity_cat_baseline_test, tgt_displacement_test, tgt_intensity_test]
@@ -411,7 +411,7 @@ def main(args):
             # if target intensity then 1 value to predict
             n_out_decoder = 2 - args.target_intensity
         # n_in decoder must be out encoder + 9 because we add side features!
-        model = models.ENCDEC(n_in_decoder=128 + 7,
+        model = models.ENCDEC(n_in_decoder=128 + x_stat_train.shape[2],
                               n_out_decoder=n_out_decoder,
                               encoder=encoder,
                               hidden_configuration_decoder=decoder_config,
