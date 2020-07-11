@@ -4,22 +4,7 @@ import time
 import os 
 from .utils import run as urun
 import copy
-#import os.path as osp
 
-#===============================
-#TODO: Write some decorators: much cleaner
-accepted_modes = (
-    'intensity',
-    'displacement',
-    'intensity_cat',
-    'baseline_intensity_cat',
-    'baseline_displacement'
-    )
-
-accepted_tasks = (
-    'regression', 
-    'classification'
-)
 #===========================
 # Eval
 

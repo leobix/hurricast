@@ -16,6 +16,34 @@ from typing import Dict, List
 1. Add typing (safer).
 2. Add memory buffer + pinning for the loaders (faster computation)
 """
+#TODO: Add mixture intensity + displacement
+accepted_modes = {
+    'intensity': 'tgt_intensity',
+    'displacement': 'tgt_displacement',
+    'intensity_cat': 'tgt_intensity_cat',
+    'baseline_intensity_cat': 'tgt_intensity_cat_baseline',
+    'baseline_displacement': 'tgt_displacement_baseline'
+}
+
+accepted_modes = {k: (v, 'x_viz', 'x_stat'
+                      ) for k, v in accepted_modes.items()}
+
+
+def CheckMode(func):
+    def decorator(*fargs, **fkwargs):
+        if 'mode' not in fkwargs:
+            raise KeyError("Please provide the mode as a named argument,")
+
+        mode = fkwargs.get('mode')
+        assert mode in accepted_modes.keys(), "\
+        Try to use the wrong mode argument.\
+        {} is not supported.\
+        Please choose among {}".format(mode,
+                                       list(accepted_mode.keys()))
+        out = func(*fargs, **fkwargs)
+        return out
+    return decorator
+
 
 class Prepro:
     """
@@ -299,19 +327,8 @@ class Prepro:
         
         return named_train_tensors, named_test_tensors
 
-#TODO: Add mixture intensity + displacement 
-accepted_modes = {
-    'intensity': 'tgt_intensity',
-    'displacement': 'tgt_displacement', 
-    'intensity_cat': 'tgt_intensity_cat',
-    'baseline_intensity_cat': 'tgt_intensity_cat_baseline',
-    'baseline_displacement': 'tgt_displacement_baseline'
-}
 
-accepted_modes = {k : (v, 'x_viz', 'x_stat'
-                      ) for k, v in accepted_modes.items()}
-
-#Experimental
+@CheckMode
 def filter_keys(train_tensors: Dict[str, torch.Tensor], 
                 test_tensors: Dict[str, torch.Tensor], 
                 mode: str) -> (Dict[str, torch.Tensor], Dict[str, torch.Tensor]):
@@ -363,8 +380,9 @@ def create_collate_fn(keys_model: list=['x_viz', 'x_stat'],
         return in_model, in_loss
     
     return lambda batch:  _collate_fn(batch, keys_model, keys_loss)
-    
-        
+
+
+@CheckMode        
 def create_loaders(mode: str,
                     data_dir: str, 
                     vision_name: str, 

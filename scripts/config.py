@@ -1,24 +1,77 @@
 #========================================================
 # Create some configs that we'll be using frequently
-encoder_config = (
-    ('conv', 64),
-    ('conv', 64),
-    ('maxpool', None),
-    ('conv', 256),
-    ('maxpool', None),
-    ('flatten', 256 * 4 * 4),
-    ('linear', 256),
-    ('fc', 128)
-)
+#Using dataclass and typing for safety: make sure we have the right number of arguments
+# and the right type
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, NewType, Tuple
 
-decoder_config = decoder_config = (
-    ('gru', 128),
-    ('gru', 128)
-)
+@dataclass
+class EncoderConfig:
+    n_in: int
+    n_out: int
+    hidden_configuration: Tuple[str, int]
 
-transformer_config = {
-    'nhead': 2,
-    'num_layers': 4,
-    'dropout': 0.1,  # Default
-    'dim_feedforward': 2048  # Default
-}
+@dataclass
+class DecoderConfig:
+    n_in_decoder: int
+    hidden_configuration_decoder: Tuple[str, int]
+    n_out_decoder: Any = None  # Need to defined later 
+                                #(depends on the task)
+    window_size:  Any = None
+
+@dataclass
+class TransformerConfig:
+    n_in_decoder: int
+    hidden_configuration_decoder: Dict[str, int]
+    n_out_transformer: int
+    n_out_decoder: Any=None #Need to defined later
+                            #(depends on the task)
+    
+    window_size: Any=None
+
+@dataclass
+class LINEARTransformConfig:
+    target_intensity: Any = None
+    target_intensity_cat: Any=None
+    window_size: Any = None
+    n_out_decoder: Any=None #Need to defined later
+                            #(depends on the task)
+
+
+encoder_config = dict(
+    n_in=3 * 3,
+    n_out=128,
+    hidden_configuration=(
+        ('conv', 64),
+        ('conv', 64),
+        ('maxpool', None),
+        ('conv', 256),
+        ('maxpool', None),
+        ('flatten', 256 * 4 * 4),
+        ('linear', 256),
+        ('fc', 128)
+    ))
+
+encdec_config = dict(
+    n_in_decoder=128 + 10,
+    n_out_decoder=None, 
+    hidden_configuration_decoder=(
+        ('gru', 128),
+        ('gru', 128)
+    ))
+
+
+transformer_config = dict(
+    n_in_decoder=128 + 10,
+    n_out_decoder=None,
+    n_out_transformer=128,
+    hidden_configuration_decoder={
+        'nhead': 2,
+        'num_layers': 4,
+        'dropout': 0.1,  # Default
+        'dim_feedforward': 2048  # Default
+    })
+
+
+lineartransform_config = dict()
+
