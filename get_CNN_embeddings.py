@@ -360,17 +360,13 @@ def main(args):
         maxs_stat = x_stat_train.reshape(-1, 7).max(dim=0).values
         mins_stat = x_stat_train.reshape(-1, 7).min(dim=0).values
 
-        print("\n maxs and mins", maxs_stat, " mins ", mins_stat)
-
         for i in range(len(maxs)):
             x_viz_train[:, :, i] = (x_viz_train[:, :, i] - mins[i]) / (maxs[i] - mins[i])
             x_viz_test[:, :, i] = (x_viz_test[:, :, i] - mins[i]) / (maxs[i] - mins[i])
-            print("min", x_viz_train[:, :, i].max(dim=0))
 
         for i in range(len(maxs_stat)):
             x_stat_train[:, :, i] = (x_stat_train[:, :, i] - mins_stat[i]) / (maxs_stat[i] - mins_stat[i])
             x_stat_test[:, :, i] = (x_stat_test[:, :, i] - mins_stat[i]) / (maxs_stat[i] - mins_stat[i])
-            print("min", x_stat_train[:, :, i].max(dim=0))
     else:
         means = x_viz_train.mean(dim=(0, 1, 3, 4))
         stds = x_viz_train.std(dim=(0, 1, 3, 4))
@@ -385,6 +381,11 @@ def main(args):
         for i in range(len(means_stat)):
             x_stat_train[:, :, i] = (x_stat_train[:, :, i] - means_stat[i]) / stds_stat[i]
             x_stat_test[:, :, i] = (x_stat_test[:, :, i] - means_stat[i]) / stds_stat[i]
+
+    if args.test_nostat:
+        n, t, p = x_stat_train.shape
+        x_stat_train = torch.zeros((n,t,p))
+        x_stat_test = torch.zeros((x_stat_test.shape[0], t, p))
 
     train_tensors = [x_viz_train, x_stat_train, tgt_intensity_cat_train, tgt_intensity_cat_baseline_train, tgt_displacement_train, tgt_intensity_train]
     test_tensors = [x_viz_test, x_stat_test, tgt_intensity_cat_test, tgt_intensity_cat_baseline_test, tgt_displacement_test, tgt_intensity_test]

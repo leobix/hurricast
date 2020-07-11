@@ -18,10 +18,10 @@ def process_netcdf(filepath, param):
     '''
     nc = netCDF4.Dataset(filepath, mode='r')
     nc.variables.keys()
-    lat = nc.variables['latitude'][:]
-    lon = nc.variables['longitude'][:]
-    time_var = nc.variables['time']
-    dtime = netCDF4.num2date(time_var[:],time_var.units)
+    #lat = nc.variables['latitude'][:]
+    #lon = nc.variables['longitude'][:]
+    #time_var = nc.variables['time']
+    #dtime = netCDF4.num2date(time_var[:],time_var.units)
     grid = nc.variables[param][:]
     #transform into np.array format and reshape something in (1,grid_size,grid_size) into (grid_size,grid_size)
     grid = np.array(grid).reshape(grid.shape[1],grid.shape[2], grid.shape[3])
@@ -100,16 +100,16 @@ def get_filename(pressure, params, time, lat, lon):
 
 
 
-def get_area(lat, lon, grid_size, e = 0.008):
+def get_area(lat, lon, grid_size, e = 0.0):
     '''
     input : center of the storm, with lat and lon ; grid_size and error parameter in case
     output: returns a centered squared grid of size grid_size degrees
     '''
     val = grid_size // 2
-    return [lat + val + e, lon - val, lat - val - e, lon + val]
+    return [lat + val + e, lon - val, lat - val - e/10, lon + val]
 
 
-def get_data(pressure_level, params, time, lat, lon, grid_size=25, degbypix=1.0, force=False, epsilon=0.008):
+def get_data(pressure_level, params, time, lat, lon, grid_size=25, degbypix=1.0, force=False, epsilon=0):
     '''
     pressure_level is the the pressure level we wish to get the data.
     params has to be in format e.g: 'geopotential' or 'u_component_of_wind' or 'v_component_of_wind'
@@ -162,7 +162,7 @@ def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = '
     :return: nothing but creates the datasets
     '''
     data = get_storms(min_wind = min_wind, min_steps = min_steps, max_steps = max_steps, path = path, extraction=True)
-    vision_data = extract_vision(data, epsilon=0.05)
+    vision_data = extract_vision(data, epsilon=0)
     y, _ = prepare_tabular_data_vision(min_wind=min_wind,
                                         min_steps=min_steps,
                                         max_steps=max_steps,

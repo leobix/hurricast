@@ -95,6 +95,9 @@ def add_model_parser(parser):
     parser.add_argument('--normalize_intensity',
                         action="store_true",
                         help='Decide if intensity target is normalized or standardized')
+    parser.add_argument('--test_nostat',
+                        action="store_true",
+                        help='Decide if using stat data for GRU')
 
     parser.add_argument('--sgd',
                         action="store_true",
