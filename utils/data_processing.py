@@ -381,7 +381,7 @@ def prepare_data2(path = "./data/last3years.csv", max_wind_change = 12, min_wind
 
 
 def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_steps=15,
-                  max_steps=120, get_displacement=True, one_hot = False):
+                  max_steps=120, get_displacement=True, one_hot = True):
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
     # select interesting columns
@@ -395,9 +395,9 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     if one_hot:
         #adding BASIN and NATURE feature as a one hot
         df0 = add_one_hot(df0, data['BASIN'], 'basin')
-        df0 = add_one_hot(df0, data['NATURE'], 'basin')
+        df0 = add_one_hot(df0, data['NATURE'], 'nature')
         #add category one_hot
-        df0 = add_one_hot(df0, df0['wind_category'], 'category')
+        #df0 = add_one_hot(df0, df0['wind_category'], 'category')
     # df0 = add_one_hot(data, df0)
     print('df0 columns :', df0.columns)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold

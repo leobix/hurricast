@@ -26,16 +26,16 @@ tgt_intensity_cat_test = np.load('data/y_test_intensity_cat_1980_50_20_90_w' + s
 fresh = pd.DataFrame(np.load('data/test_features_filtered_direct_w' + str(window_size) + '.npy', allow_pickle=True))
 
 names = ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
-         'STORM_SPEED', 'STORM_DIR', 'storm_category', 'cat_basin_EP', 'cat_basin_NI',
+         'STORM_SPEED', 'STORM_DIR', 'cos_day', 'sign_day', 'storm_category', 'cat_basin_AN',
+         'cat_basin_EP', 'cat_basin_NI', 'cat_basin_SA',
          'cat_basin_SI', 'cat_basin_SP', 'cat_basin_WP', 'cat_nature_DS', 'cat_nature_ET',
          'cat_nature_MX', 'cat_nature_NR', 'cat_nature_SS', 'cat_nature_TS',
-         'cat_UNKNOWN',
          'STORM_DISPLACEMENT_X', 'STORM_DISPLACEMENT_Y']
 
 names_all = names * window_size
 
 for i in range(len(names_all)):
-    names_all[i] += '_' + str(i // 22)
+    names_all[i] += '_' + str(i // 25)
 
 X_train = pd.DataFrame(X_train)
 X_test = pd.DataFrame(X_test)
@@ -90,7 +90,7 @@ grid = iai.GridSearch(
     iai.OptimalFeatureSelectionRegressor(
         random_seed=1,
     ),
-    sparsity=range(90, 150, 20),
+    sparsity=range(90, 120, 5),
 )
 
 grid.fit(X_train, tgt_intensity_train)
