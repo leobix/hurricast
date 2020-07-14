@@ -38,24 +38,24 @@ def main(args):
     X_train_vision = x_viz_train.reshape(x_viz_train.shape[0], -1)
     X_test_vision = x_viz_test.reshape(x_viz_test.shape[0], -1)
 
-    np.save('data/X_train_stat_1980_34_20_120_w' + str(window_size) + 'at_' + str(steps_out) + '.npy', X_train, allow_pickle = True)
-    np.save('data/X_test_stat_1980_34_20_120_w' + str(window_size)+ 'at_' + str(steps_out) + '.npy', X_test, allow_pickle = True)
+    np.save('data/X_train_stat_1980_34_20_120_w' + str(window_size) + '_at_' + str(steps_out) + '.npy', X_train, allow_pickle = True)
+    np.save('data/X_test_stat_1980_34_20_120_w' + str(window_size)+ '_at_' + str(steps_out) + '.npy', X_test, allow_pickle = True)
 
     if args.vision:
-        np.save('data/X_train_vision_1980_34_20_120_w' + str(window_size)+ 'at_' + str(steps_out) + '.npy', X_train_vision, allow_pickle = True)
-        np.save('data/X_test_vision_1980_34_20_120_w' + str(window_size) + 'at_' + str(steps_out) + '.npy', X_test_vision, allow_pickle = True)
+        np.save('data/X_train_vision_1980_34_20_120_w' + str(window_size)+ '_at_' + str(steps_out) + '.npy', X_train_vision, allow_pickle = True)
+        np.save('data/X_test_vision_1980_34_20_120_w' + str(window_size) + '_at_' + str(steps_out) + '.npy', X_test_vision, allow_pickle = True)
 
-    np.save('data/y_train_intensity_cat_1980_34_20_120_w' + str(window_size)+ 'at_' + str(steps_out) + '.npy', tgt_intensity_cat_train, allow_pickle = True)
-    np.save('data/y_test_intensity_cat_1980_34_20_120_w' + str(window_size)+ 'at_' + str(steps_out) + '.npy', tgt_intensity_cat_test, allow_pickle = True)
+    np.save('data/y_train_intensity_cat_1980_34_20_120_w' + str(window_size)+ '_at_' + str(steps_out) + '.npy', tgt_intensity_cat_train, allow_pickle = True)
+    np.save('data/y_test_intensity_cat_1980_34_20_120_w' + str(window_size)+ '_at_' + str(steps_out) + '.npy', tgt_intensity_cat_test, allow_pickle = True)
 
-    np.save('data/y_train_displacement_1980_34_20_120_w' + str(window_size)+ 'at_' + str(steps_out) + '.npy', tgt_displacement_train, allow_pickle = True)
-    np.save('data/y_test_displacement_1980_34_20_120_w' + str(window_size)+ 'at_' + str(steps_out) + '.npy', tgt_displacement_test, allow_pickle = True)
+    np.save('data/y_train_displacement_1980_34_20_120_w' + str(window_size)+ '_at_' + str(steps_out) + '.npy', tgt_displacement_train, allow_pickle = True)
+    np.save('data/y_test_displacement_1980_34_20_120_w' + str(window_size)+ '_at_' + str(steps_out) + '.npy', tgt_displacement_test, allow_pickle = True)
 
-    np.save('data/y_train_intensity_cat_baseline_1980_34_20_120_w' + str(window_size) + 'at_' + str(steps_out) + '.npy', tgt_intensity_cat_baseline_train, allow_pickle = True)
-    np.save('data/y_test_intensity_cat_baseline_1980_34_20_120_w' + str(window_size) + 'at_' + str(steps_out) + '.npy', tgt_intensity_cat_baseline_test, allow_pickle = True)
+    np.save('data/y_train_intensity_cat_baseline_1980_34_20_120_w' + str(window_size) + '_at_' + str(steps_out) + '.npy', tgt_intensity_cat_baseline_train, allow_pickle = True)
+    np.save('data/y_test_intensity_cat_baseline_1980_34_20_120_w' + str(window_size) + '_at_' + str(steps_out) + '.npy', tgt_intensity_cat_baseline_test, allow_pickle = True)
 
-    np.save('data/y_train_intensity_1980_34_20_120_w' + str(window_size) + 'at_' + str(steps_out) + '.npy', tgt_intensity_train, allow_pickle = True)
-    np.save('data/y_test_intensity_1980_34_20_120_w' + str(window_size) + 'at_' + str(steps_out) + '.npy', tgt_intensity_test, allow_pickle = True)
+    np.save('data/y_train_intensity_1980_34_20_120_w' + str(window_size) + '_at_' + str(steps_out) + '.npy', tgt_intensity_train, allow_pickle = True)
+    np.save('data/y_test_intensity_1980_34_20_120_w' + str(window_size) + '_at_' + str(steps_out) + '.npy', tgt_intensity_test, allow_pickle = True)
 
 
 if __name__ == "__main__":
