@@ -181,6 +181,7 @@ def eval(model,
         if args.save and eval_accuracy > best_accuracy :
             torch.save(model.state_dict(), osp.join(args.output_dir, 'best_model.pt'))
             best_accuracy = eval_accuracy
+            print("\n Model has been savec.")
 
 
 
