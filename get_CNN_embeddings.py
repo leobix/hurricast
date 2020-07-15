@@ -472,6 +472,7 @@ def main(args):
 if __name__ == "__main__":
     import setup
     best_accuracy = 0
+    global best_accuracy
     args = setup.create_setup()
     # print(vars(args))
     setup.create_seeds()
