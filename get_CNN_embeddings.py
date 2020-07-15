@@ -66,6 +66,7 @@ def eval(model,
          loss_fn,
          test_loader,
          writer,
+         args,
          epoch_number,
          mean_intensity,
          std_intensity,
@@ -155,8 +156,9 @@ def eval(model,
         print("\n MAE Eval is: ", mae_eval)
 
     if target_intensity_cat:
+        eval_accuracy = accuracy.item() / len(loop)
         writer.add_scalar('eval_accuracy',
-                          accuracy.item() / len(loop),
+                          eval_accuracy,
                           epoch_number)
         writer.add_scalar('eval_f1_micro',
                           f1_micro.item() / len(loop),
@@ -173,8 +175,13 @@ def eval(model,
         writer.add_scalar('eval_f1_macro_baseline',
                           f1_macro_baseline.item() / len(loop),
                           epoch_number)
-        print("\n Accuracy Eval is: ", accuracy.item() / len(loop))
+        print("\n Accuracy Eval is: ", eval_accuracy)
         print("\n Accuracy Eval Baseline is: ", accuracy_baseline.item() / len(loop))
+        print("\n Best accuracy so far was: ", best_accuracy)
+        if args.save and eval_accuracy > best_accuracy :
+            torch.save(model.state_dict(), osp.join(args.output_dir, 'best_model.pt'))
+            best_accuracy = eval_accuracy
+
 
 
     model.train()
@@ -285,6 +292,7 @@ def train(model,
         _, eval_loss_sample, _ = eval(model,
                                       loss_fn=loss_fn,
                                       test_loader=test_loader,
+                                      args = args,
                                       writer=writer,
                                       epoch_number=epoch,
                                       mean_intensity=mean_intensity,
@@ -462,7 +470,7 @@ def main(args):
 
 if __name__ == "__main__":
     import setup
-
+    best_accuracy = 0
     args = setup.create_setup()
     # print(vars(args))
     setup.create_seeds()
