@@ -557,6 +557,29 @@ class ENCDEC(nn.Module):
         outputs = self.last_linear(outputs.flatten(start_dim=1))
         return outputs
 
+    def get_embeddings(self, x_img, x_stat):
+        """
+        x_img: bs, timesteps
+        x_stat: bs, timesteps, ....
+        """
+        bs = x_img.size(0)  # batch_size to init the hidden layers
+        hidden = self.init_hidden(bs)
+
+        outputs = []
+        #List of zeros tensors
+        for t in range(x_img.size(1)):
+            x = self.encoder(torch.select(x_img, axis=1, index=t))
+            #FUSION
+            x = torch.cat([x, torch.select(x_stat, axis=1, index=t)],
+                          axis=1)
+            out, hidden = self.forward_rec(x, hidden)
+            outputs.append(out)
+        outputs = torch.stack(outputs).transpose(1, 0)
+
+        #Final transformation
+        #outputs = self.last_linear(outputs.flatten(start_dim=1))
+        return outputs
+
     def init_hidden(self, bs):
         hidden_dims = list(map(lambda x: getattr(
             x, 'hidden_size'),  self.decoder_cells))
