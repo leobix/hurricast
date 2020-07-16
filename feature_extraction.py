@@ -42,7 +42,7 @@ X_test = pd.DataFrame(X_test)
 X_train.columns = names_all
 X_test.columns = names_all
 
-cols = [c for c in X_train.columns if c.lower()[-2] == '_0' or c.lower()[:3] != 'cat']
+cols = [c for c in X_train.columns if c.lower()[-2:] == '_0' or c.lower()[:3] != 'cat']
 
 X_train = X_train[cols]
 X_test = X_test[cols]

@@ -419,4 +419,4 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
             tt[0] = datetime.strptime(tt[0], "%Y-%m-%d %H:%M:%S")
         except:
             pass
-    return e[:, :, 1:], d
+    return e[:, :, 1:], d, e

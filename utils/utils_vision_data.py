@@ -163,7 +163,7 @@ def create_dataset(min_wind, min_steps, max_steps, vision_name, y_name, path = '
     '''
     data = get_storms(min_wind = min_wind, min_steps = min_steps, max_steps = max_steps, path = path, extraction=True)
     vision_data = extract_vision(data, epsilon=0)
-    y, _ = prepare_tabular_data_vision(min_wind=min_wind,
+    y, _, y_with_timestamp = prepare_tabular_data_vision(min_wind=min_wind,
                                         min_steps=min_steps,
                                         max_steps=max_steps,
                                         path = path)

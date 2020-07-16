@@ -138,6 +138,10 @@ def main(args):
     model.load_state_dict(torch.load(osp.join(args.output_dir, 'best_model.pt')))
     model.eval()
 
+    embeds = model.get_embeddings(x_viz_test, x_stat_test)
+
+
+
 
 if __name__ == "__main__":
     import setup
