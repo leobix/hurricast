@@ -231,11 +231,6 @@ class ExperimentalENCDEC(nn.Module):
 
 @RegisterModel('TRANSFORMER')
 class TRANSFORMER(nn.Module):
-    """
-    #TODO: Test
-    #TODO: Add positional encoding
-    """
-
     def __init__(self,
                  encoder,
                  n_in_decoder: int,
@@ -262,6 +257,7 @@ class TRANSFORMER(nn.Module):
         self.predictor = nn.Linear(self.n_out_transformer, 
                                    self.n_out_decoder)
 
+    
     def create_transformer(self):
         transformer_encoder_layer = nn.TransformerEncoderLayer(
             d_model=self.n_in_decoder,
@@ -293,6 +289,7 @@ class TRANSFORMER(nn.Module):
 class LINEARTransform(torch.nn.Module):
     """
     Simple Net used to debug.
+    Not using x_stat in the forward pass
     """
     def __init__(self, encoder, window_size, target_intensity = False, target_intensity_cat = False):
         super(LINEARTransform, self).__init__()
@@ -322,7 +319,6 @@ class LINEARTransform(torch.nn.Module):
         return out_enc
 
 
-
 class PositionalEncoding(nn.Module):
     "Implement the Positional Encoding function."
 
@@ -348,7 +344,6 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-
 if __name__ == "__main__":
 
     def test():
@@ -360,11 +355,12 @@ if __name__ == "__main__":
             ('conv', 256),
             ('maxpool', None),
             ('flatten', 256 * 4 * 4),
-            ('linear', 512))
-        encoder = CNNEncoder(n_in=9,
-                        n_out=512,
-                        hidden_configuration=encoder_config)
-    
+            ('linear', 128))
+        
+        encoder = CNNEncoder(
+            n_in=9,
+            n_out=128,
+            hidden_configuration=encoder_config)
     
         x = torch.randn(10,9,25,25)
         print(x.size())
@@ -374,16 +370,19 @@ if __name__ == "__main__":
 
         transfo_config = dict(
             n_in_decoder=128 + 10,
-            n_out_decoder=None,
+            n_out_decoder=7,
             n_out_transformer=128,
             hidden_configuration_decoder={
                 'nhead': 2,
                 'num_layers': 4,
                 'dropout': 0.1,  # Default
                 'dim_feedforward': 2048  # Default
-            })
+            }, 
+            window_size=8, 
+            encoder=encoder)
+
         transfo = TRANSFORMER(**transfo_config)
-        
+        print(transfo)
         x = torch.randn(10,8, 9,25,25)
         out = transfo(x)
         print(out.size())
