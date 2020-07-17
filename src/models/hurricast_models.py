@@ -2,6 +2,14 @@
 Gather models for hurricane prediction.
 Check whether we want to have our own version of attention layers.
 https://medium.com/huggingface/understanding-emotions-from-keras-to-pytorch-3ccb61d5a983\
+
+
+One way to implement those models would to have that CNN + Decoder
+interaction could be:
+1. x : (bs, T, H) 
+    x.flatten(end_dim=1) (bs*T, H) --> CNN (bs*T, H_out)--> Reshape
+    ENCODER Over 
+
 """
 import torch
 import torch.nn as nn 
@@ -115,12 +123,9 @@ class CNNEncoder(nn.Module):
 
 @RegisterModel('ENCDEC')
 class ENCDEC(nn.Module):
-    #TODO: Make sure we can apply the CNN before feeding all of it
-    #to the RNN --> I'm affraid we may not backprop correctly. Make sure that works
     """
     The output is just the very last hidden for now.
     """
-
     def __init__(self,
                  encoder,
                  n_in_decoder: int,
@@ -142,14 +147,18 @@ class ENCDEC(nn.Module):
         cells = {'gru': nn.GRUCell,
                  'lstm': nn.LSTMCell,
                  'rnn': nn.RNNCell}
+        
         rec_layers = []
         n_prev = self.n_in_decoder
         for cell_type, hidden_out in self.hidden_config:
             rec_layers.append(cells[cell_type](n_prev, hidden_out))
             n_prev = hidden_out
+        
         #Create the last linear as well:
-        last_linear = nn.Linear(in_features=hidden_out*self.window_size,
-                                out_features=self.n_out_decoder)
+        last_linear = nn.Linear(
+            in_features=hidden_out*self.window_size,
+            out_features=self.n_out_decoder)
+
         return nn.Sequential(*rec_layers), last_linear
 
     def forward_rec(self, x, hidden):
@@ -193,47 +202,38 @@ class ENCDEC(nn.Module):
 
 
 '''
-class TRANSFORMER(nn.Module):
-    """
-
-    """
-    def __init__(self, 
-                encoder, 
-                d_model, 
-                n_head, 
-                n_transformer_layer):
-        super(TRANSFORMER, self).__init__()
-        warnings.warn('Using a Transformer model without positional encoding', 
-                UserWarning)
-        self.encodercnn = encoder
-        self.d_model = d_model
-        self.n_head = n_head
-        self.n_transformer_layer = n_head
-        self.transformer_layers = self.create_layers()
-        assert hasattr(self, 'encodercnn')
-    
-    def create_layers(self):
-        layers = [self.encodercnn]
-        layers.extend([nn.TransformerEncoderLayer(
-                                d_model=self.d_model, 
-                                nhead=self.n_head)] 
-                                * self.n_transformer_layer)
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        #Naive way
-        out = []
-        for x_ in x.unbind(1): #Loop over the sequence
-            out.append(self.encodercnn(x_))
-        out = torch.stack(out).transpose(0, 1)
-        return out#self.transformer_layers(out)
+TODO: Add a simple wrapper around a recurrent torch recurrent model
+# The idea would be to create the wrapper in which all models could work
+1. Encoder woudl be either None, One big CNN or 3 CNNs and would map x_vis--> bs, T, H
+2. Fusion module that can concatenate image and stat data 
+3. The decoder: Could be a Transformer/RNN/or anything that maps bs, T, H --> Class
 '''
+
+class ExperimentalENCDEC(nn.Module):
+    def __init__(self):
+        return None
+
+    def fwd_viz(self, x_viz):
+        return x_viz
+
+    def fusion(self, x_stat, x_viz):
+        return torch.cat([x_stat, x_viz], -1)
+
+    def decode(self, x):
+        return x
+    
+    def forward(self, x_stat, x_viz):
+        x_viz = self.fwd_viz(x_viz)
+        fused_x = self.fusion(x_stat, x_viz)
+        return self.decode(fused_x)
+
 
 
 @RegisterModel('TRANSFORMER')
 class TRANSFORMER(nn.Module):
     """
     #TODO: Test
+    #TODO: Add positional encoding
     """
 
     def __init__(self,
@@ -272,7 +272,7 @@ class TRANSFORMER(nn.Module):
         return transformer_encoder
 
     def create_linear(self):
-        return nn.Linear(self.window_size*self.n_in_decoder,
+        return nn.Linear(self.window_size * self.n_in_decoder,
                          self.n_out_transformer)
 
     def forward(self, x_viz, x_stat):
@@ -322,29 +322,70 @@ class LINEARTransform(torch.nn.Module):
         return out_enc
 
 
-if __name__ == "__main__":
-    print(MODEL_REGISTRY)
-    encoder_config = (
-        ('conv', 64),
-        ('conv', 64),
-        ('maxpool', None),
-        ('conv', 256),
-        ('maxpool', None),
-        ('flatten', 256 * 4 * 4),
-        ('linear', 512)
-    )
-    encoder = CNNEncoder(n_in=9,
-                 n_out=512,
-                 hidden_configuration=encoder_config)
-    x = torch.randn(10,9,25,25)
-    print(x.size())
-    out = encoder(x)
-    print(out.size())
 
-    transfo = TRANSFORMER(encoder, 
-                d_model=512, 
-                n_head=4, 
-                n_transformer_layer=3)
-    x = torch.randn(10,8, 9,25,25)
-    out = transfo(x)
-    print(out.size())
+class PositionalEncoding(nn.Module):
+    "Implement the Positional Encoding function."
+
+    def __init__(self, d_model, dropout, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        # Compute the positional encodings once in log space.
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) *
+                             -(math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        """
+        x: (bs, T)
+        """
+        x = x + self.pe[:, :x.size(1)]
+        return self.dropout(x)
+
+
+
+if __name__ == "__main__":
+
+    def test():
+        print(MODEL_REGISTRY)
+        encoder_config = (
+            ('conv', 64),
+            ('conv', 64),
+            ('maxpool', None),
+            ('conv', 256),
+            ('maxpool', None),
+            ('flatten', 256 * 4 * 4),
+            ('linear', 512))
+        encoder = CNNEncoder(n_in=9,
+                        n_out=512,
+                        hidden_configuration=encoder_config)
+    
+    
+        x = torch.randn(10,9,25,25)
+        print(x.size())
+        out = encoder(x)
+        print(out.size())
+        
+
+        transfo_config = dict(
+            n_in_decoder=128 + 10,
+            n_out_decoder=None,
+            n_out_transformer=128,
+            hidden_configuration_decoder={
+                'nhead': 2,
+                'num_layers': 4,
+                'dropout': 0.1,  # Default
+                'dim_feedforward': 2048  # Default
+            })
+        transfo = TRANSFORMER(**transfo_config)
+        
+        x = torch.randn(10,8, 9,25,25)
+        out = transfo(x)
+        print(out.size())
+    
+    test()

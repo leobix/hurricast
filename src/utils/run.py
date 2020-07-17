@@ -107,7 +107,8 @@ def write_hparams(writer, args, metric_dict, hparam_dict=None):
     writer.add_hparams(hparam_dict, metric_dict)
 
 
-def update_writer(writer, epoch: int,
+def update_writer(writer,
+                  epoch: int,
                   metrics_dict: dict,
                   train_losses: list,
                   train_loss: list, valid_loss: list,
@@ -128,11 +129,17 @@ def update_writer(writer, epoch: int,
                           valid_loss, epoch)
 
 
-def update_post_train_writer(writer, args, test_metrics, hparam_metric_dict, hparam_dict=None):
-    write_hparams(writer,args,
-                        hparam_dict=hparam_dict,
-                        metric_dict={k: v for k, v in test_metrics.items() if isinstance(v, (float, int))}
-                        )
+def update_post_train_writer(writer,
+                             args, 
+                             test_metrics, 
+                             hparam_metric_dict, 
+                             hparam_dict=None):
+    write_hparams(
+        writer, args,
+        hparam_dict=hparam_dict,
+        metric_dict={k: v for k, v in test_metrics.items()
+                     if isinstance(v, (float, int))}
+    )
     writer.add_text('classification_report', test_metrics['classification_report'])  #,
                                                    #'Val_Loss': float(best_valid_loss),
                        #                            'Valid_Acc': float(best_valid_acc)})
@@ -151,19 +158,3 @@ def get_pred_fn(task='classification'):
         else lambda z: z
     return get_pred
 
-#def _create_stats():
-    #    return {
-    #        'train_losses': [], 'valid_losses': [],
-    #        'valid_accuracies': [], 'test_accuracies': [],
-    #        'train_losses_gran': [], 'valid_losses_gran': []
-    #        }
-
-    #def _update_stats(stats, train_loss,
-    #                  valid_loss, train_losses,
-    #                  valid_losses, valid_acc):
-    #    stats['train_losses'].append(train_loss)
-    #    stats['valid_losses'].append(valid_loss)
-    #    stats['train_losses_gran'].extend(train_losses)
-    #    stats['valid_losses_gran'].extend(valid_losses)
-    #    stats['valid_accuracies'].append(valid_acc)
-    #    return stats
