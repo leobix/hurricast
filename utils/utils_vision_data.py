@@ -96,7 +96,8 @@ def get_filename(pressure, params, time, lat, lon):
     params_str = '_'.join(map(str, params))
     pressure_str = '_'.join(map(str, pressure))
     year, month, day, hour = str(time.year), str(time.month), str(time.day), str(time.hour)
-    return 'data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
+    #TODO Change here in case
+    return '../../../Volumes/Untitled/data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
 
 
 
@@ -136,13 +137,15 @@ def get_data(pressure_level, params, time, lat, lon, grid_size=25, degbypix=1.0,
         print("Already downloaded", get_filename(pressure_level, params, time, lat, lon))
 
 
-def download_all2(data):
+def download_all2(data, pressure_level = ['900', '700', '500', '225', '100'], params = ['geopotential', 'relative_humidity', 'temperature', 'u_component_of_wind', 'v_component_of_wind'], grid_size = 25, degbypix = 1.0):
+    #params = ['geopotential', 'relative_humidity', 'temperature', 'u_component_of_wind', 'v_component_of_wind']
+    #pressure_level = 'pressure_level': ['100', '200', '225', '300','400', '500', '600','700', '800', '850','925', '975', '1000']
     i = 0
     for storm in data:
         for t in storm:
             time, lat, lon = t[0], t[1], t[2]
             try:
-                get_data(['700', '500', '225'], ['geopotential', 'u_component_of_wind', 'v_component_of_wind'], time, lat, lon, grid_size = 25)
+                get_data(pressure_level, params, time, lat, lon, grid_size = grid_size, degbypix = degbypix)
             except:
                 print("False request.")
         i+=1

@@ -14,7 +14,7 @@ device = torch.device("cpu")
 
 #allows to keep only specific columns
 def select_data(data):
-    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]#, 'NATURE']]
+    return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
 
 #convert columns to numeric values
 #and interpolate missing values
@@ -27,8 +27,12 @@ def numeric_data(data):
 def smooth_day(df):
     df['ISO_TIME'] = pd.to_datetime(df['ISO_TIME'], format= '%Y-%m-%d %H:%M:%S')
     df['cos_day'] = np.cos(2 * np.pi * df['ISO_TIME'].dt.day / 365)
-    df['sign_day'] = 0
-    df.loc[(df['ISO_TIME'].dt.hour <=11) & (df['ISO_TIME'].dt.hour >=0),'sign_day'] = 1
+    df['sin_day'] = np.sin(2 * np.pi * df['ISO_TIME'].dt.day / 365)
+    df['COS_STORM_DIR'] = np.cos(2 * np.pi * df['STORM_DIR'] / 360)
+    df['SIN_STORM_DIR'] = np.sin(2 * np.pi * df['STORM_DIR'] / 360)
+    df.drop('STORM_DIR', axis=1)
+
+    #df.loc[(df['ISO_TIME'].dt.hour <=11) & (df['ISO_TIME'].dt.hour >=0),'sign_day'] = 1
     return df
 
 #This code allows to get the maximum wind change in the last X hours.
