@@ -101,10 +101,10 @@ class Prepro:
                                        index=2)
         tgt_intensity_cat = torch.select(target_intensity,
                                      dim=-1,
-                                     index=9).type(torch.LongTensor)
+                                     index=11).type(torch.LongTensor)
         tgt_intensity_cat_baseline = torch.select(target_intensity_cat_baseline,
                                          dim=-1,
-                                         index=9).type(torch.LongTensor)
+                                         index=11).type(torch.LongTensor)
         
         train_data = dict(X_vision=X_vision.float(),
                                X_stat=X_stat.float(),

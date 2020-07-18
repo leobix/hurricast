@@ -320,8 +320,8 @@ def main(args):
     print(' Prepare the training using ', device)
     # Load files and reformat.
 
-    x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:9])
-    x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:9])
+    x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])
+    x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])
 
     x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',  allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
     x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
@@ -365,8 +365,8 @@ def main(args):
         maxs = x_viz_train.permute(0,1,3,4,2).reshape(-1, 9).max(dim=0).values
         mins = x_viz_train.permute(0,1,3,4,2).reshape(-1, 9).min(dim=0).values
 
-        maxs_stat = x_stat_train.reshape(-1, 7).max(dim=0).values
-        mins_stat = x_stat_train.reshape(-1, 7).min(dim=0).values
+        maxs_stat = x_stat_train[:,:,:7].reshape(-1, 6).max(dim=0).values
+        mins_stat = x_stat_train[:,:,:7].reshape(-1, 6).min(dim=0).values
 
         for i in range(len(maxs)):
             x_viz_train[:, :, i] = (x_viz_train[:, :, i] - mins[i]) / (maxs[i] - mins[i])
@@ -379,8 +379,8 @@ def main(args):
         means = x_viz_train.mean(dim=(0, 1, 3, 4))
         stds = x_viz_train.std(dim=(0, 1, 3, 4))
 
-        means_stat = x_stat_train.mean(dim=(0, 1))
-        stds_stat = x_stat_train.std(dim=(0, 1))
+        means_stat = x_stat_train[:,:,:7].mean(dim=(0, 1))
+        stds_stat = x_stat_train[:,:,:7].std(dim=(0, 1))
 
         for i in range(len(means)):
             x_viz_train[:, :, i] = (x_viz_train[:, :, i] - means[i]) / stds[i]
