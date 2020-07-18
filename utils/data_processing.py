@@ -30,7 +30,7 @@ def smooth_day(df):
     df['sin_day'] = np.sin(2 * np.pi * df['ISO_TIME'].dt.day / 365)
     df['COS_STORM_DIR'] = np.cos(2 * np.pi * df['STORM_DIR'] / 360)
     df['SIN_STORM_DIR'] = np.sin(2 * np.pi * df['STORM_DIR'] / 360)
-    df.drop('STORM_DIR', axis=1)
+    df = df.drop('STORM_DIR', axis=1)
 
     #df.loc[(df['ISO_TIME'].dt.hour <=11) & (df['ISO_TIME'].dt.hour >=0),'sign_day'] = 1
     return df
