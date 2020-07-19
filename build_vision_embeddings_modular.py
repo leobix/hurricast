@@ -320,11 +320,15 @@ def main(args):
     print(' Prepare the training using ', device)
     # Load files and reformat.
 
-    x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])
-    x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])
+    x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
+                                        allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])[:,-args.sub_window_size:]
+    x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
+                                       allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])[:,-args.sub_window_size:]
 
-    x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',  allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
-    x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))
+    x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
+                                       allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:]
+    x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
+                                      allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:]
 
     tgt_intensity_cat_train = torch.LongTensor(np.load('data/y_train_intensity_cat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                       allow_pickle=True))
@@ -343,6 +347,10 @@ def main(args):
                                      allow_pickle=True))
     tgt_displacement_test = torch.Tensor(np.load('data/y_test_displacement_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                     allow_pickle=True))
+
+
+    args.window_size = args.sub_window_size
+    print("\n Window of prediction is: ", args.window_size)
 
     #Standardize velocity target
     if args.normalize_intensity:

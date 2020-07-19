@@ -12,21 +12,25 @@ from julia import Julia
 Julia(sysimage='../sys.so')
 from interpretableai import iai
 
-window_size = 16
+window_size = 8
+predict_at = 8
 
-X_train = np.load('data/X_train_stat_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle=True)
-X_test = np.load('data/X_test_stat_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle=True)
+X_train = np.load('data/X_train_stat_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',
+            allow_pickle=True)
+X_test = np.load('data/X_test_stat_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',
+            allow_pickle=True)
 
-tgt_intensity_train = np.load('data/y_train_intensity_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle=True)
-tgt_intensity_test = np.load('data/y_test_intensity_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle=True)
+tgt_intensity_cat_train = np.load('data/y_train_intensity_cat_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',
+                              allow_pickle=True)
+tgt_intensity_cat_test = np.load('data/y_test_intensity_cat_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',
+                             allow_pickle=True)
 
-tgt_intensity_cat_train = np.load('data/y_train_intensity_cat_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
-tgt_intensity_cat_test = np.load('data/y_test_intensity_cat_1980_50_20_90_w' + str(window_size) + '.npy',  allow_pickle = True)
+tgt_intensity_train = np.load('data/y_train_intensity_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',  allow_pickle = True)
+tgt_intensity_test = np.load('data/y_test_intensity_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',  allow_pickle = True)
 
-fresh = pd.DataFrame(np.load('data/test_features_filtered_direct_w' + str(window_size) + '.npy', allow_pickle=True))
 
 names = ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
-         'STORM_SPEED', 'STORM_DIR', 'cos_day', 'sign_day', 'storm_category', 'cat_basin_AN',
+         'STORM_SPEED', 'cat_cos_day', 'cat_sign_day', 'COS_STORM_DIR', 'SIN_STORM_DIR', 'cat_storm_category', 'cat_basin_AN',
          'cat_basin_EP', 'cat_basin_NI', 'cat_basin_SA',
          'cat_basin_SI', 'cat_basin_SP', 'cat_basin_WP', 'cat_nature_DS', 'cat_nature_ET',
          'cat_nature_MX', 'cat_nature_NR', 'cat_nature_SS', 'cat_nature_TS',
@@ -35,7 +39,7 @@ names = ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
 names_all = names * window_size
 
 for i in range(len(names_all)):
-    names_all[i] += '_' + str(i // 25)
+    names_all[i] += '_' + str(i // 26)
 
 X_train = pd.DataFrame(X_train)
 X_test = pd.DataFrame(X_test)
@@ -47,24 +51,23 @@ cols = [c for c in X_train.columns if c.lower()[-2:] == '_0' or c.lower()[:3] !=
 X_train = X_train[cols]
 X_test = X_test[cols]
 
-#cat_cols = [c for c in X_train.columns if c.lower()[:3] == 'cat']
-
 #for col in cat_cols:
     #X_train[col] = X_train[col].astype('category')
     #X_test[col] = X_test[col].astype('category')
 
-n = tgt_intensity_train.shape[0]
-#train = pd.concat([fresh[:n], X_train], axis=1)
-#test = pd.concat([fresh[n:], X_test], axis=1)
-train = pd.DataFrame(np.concatenate((np.array(fresh[:n]), np.array(X_train)), axis = 1))
-test = pd.DataFrame(np.concatenate((np.array(fresh[n:]), np.array(X_test)), axis = 1))
-train.columns = [str(i) for i in range(train.shape[1])]
-test.columns = train.columns
 
 
 #(train_X, train_y), (test_X, test_y) = iai.split_data('regression', train, tgt_intensity_train, seed=1)
 
 ##### FRESH + TABULAR #####
+fresh = pd.DataFrame(np.load('data/test_features_filtered_direct_w' + str(window_size) + '.npy', allow_pickle=True))
+
+n = tgt_intensity_train.shape[0]
+train = pd.DataFrame(np.concatenate((np.array(fresh[:n]), np.array(X_train)), axis = 1))
+test = pd.DataFrame(np.concatenate((np.array(fresh[n:]), np.array(X_test)), axis = 1))
+train.columns = [str(i) for i in range(train.shape[1])]
+test.columns = train.columns
+
 grid = iai.GridSearch(
     iai.OptimalFeatureSelectionRegressor(
         random_seed=1,

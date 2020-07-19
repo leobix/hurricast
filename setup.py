@@ -70,10 +70,6 @@ def add_model_parser(parser):
                        help='L2 Penalization for the training',
                        default=0.)
 
-    parser.add_argument('--gpu_nb', 
-                        type=int,
-                        help='GPU index. Use -1 for cpu', 
-                        default=-1)
     parser.add_argument('--target_intensity',
                         action="store_true",
                         help='Predict intensity (windspeed) instead of displacement if enabled')
@@ -143,6 +139,13 @@ def add_data_parser(parser):
                         default=8, 
                         help='Number of data points to consider as part of a sentence.'
                         )
+
+    parser.add_argument('--sub_window_size',
+                        type=int,
+                        default=8,
+                        help='Number of data points to consider as part of a sentence.'
+                        )
+
     parser.add_argument('--train_test_split',
                         type=float, 
                         default=0.8)
@@ -172,10 +175,11 @@ def create_setup():
     if osp.exists(args.output_dir):
         import datetime
         now = datetime.datetime.now()
-        now_ = '{}_{}_{}_{}'.format(now.month,
+        now_ = '{}_{}_{}_{}_{}'.format(now.month,
                                     now.day,
                                     now.hour,
-                                    now.minute)
+                                    now.minute,
+                                    now.second)
 
         args.output_dir = './results/results'+now_
     else:
