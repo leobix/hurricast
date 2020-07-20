@@ -508,8 +508,9 @@ class ENCDEC(nn.Module):
         self.window_size = window_size
         #TODO CHANGE BACK
         self.decoder_cells, \
-            self.b_n_pre_last_linear, self.last_linear, self.last_linear2 = self.create_rec_cells()
-        self.b_n_last_linear = nn.BatchNorm1d(128)
+            self.last_linear = self.create_rec_cells()
+            #self.b_n_pre_last_linear, self.last_linear, self.last_linear2 = self.create_rec_cells()
+        #self.b_n_last_linear = nn.BatchNorm1d(128)
 
 
     def create_rec_cells(self):
@@ -524,14 +525,14 @@ class ENCDEC(nn.Module):
             n_prev = hidden_out
         #Create the last linear as well:
         #TODO CHANGE BACK IN CASE
-        #last_linear = nn.Linear(in_features=hidden_out*self.window_size,
-                                #out_features=self.n_out_decoder)
+        last_linear = nn.Linear(in_features=hidden_out*self.window_size,
+                                out_features=self.n_out_decoder)
         b_n_pre_last_linear = nn.BatchNorm1d(hidden_out * self.window_size)
-        last_linear = nn.Linear(in_features=hidden_out * self.window_size,
-                                out_features=128)
+        #last_linear = nn.Linear(in_features=hidden_out * self.window_size,
+        #                       out_features=128)
         last_linear2 = nn.Linear(in_features=128,
                                 out_features=self.n_out_decoder)
-        return nn.Sequential(*rec_layers), b_n_pre_last_linear, last_linear, last_linear2
+        return nn.Sequential(*rec_layers), last_linear #b_n_pre_last_linear, last_linear, last_linear2
 
     def forward_rec(self, x, hidden):
         out_prev = x
@@ -567,8 +568,8 @@ class ENCDEC(nn.Module):
         #outputs = self.last_linear(outputs)
         outputs = self.last_linear(outputs.flatten(start_dim=1))
         #TODO
-        outputs = self.b_n_last_linear(outputs)
-        outputs = self.last_linear2(outputs)
+        #outputs = self.b_n_last_linear(outputs)
+        #outputs = self.last_linear2(outputs)
         return outputs
 
     def get_embeddings(self, x_img, x_stat):
