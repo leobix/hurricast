@@ -630,17 +630,20 @@ class LINEARTransform(torch.nn.Module):
     def __init__(self, encoder, window_size, target_intensity = False, target_intensity_cat = False):
         super(LINEARTransform, self).__init__()
         self.encoder = encoder
-        self.linear = torch.nn.Linear(128 * window_size, 128)
+        n = 64
+        m = n * window_size
+        self.linear = torch.nn.Linear(n * window_size, m//4)
+        self.linear_bn = nn.BatchNorm1d(m//4)
         self.target_intensity = target_intensity
         self.target_intensity_cat = target_intensity_cat
         if self.target_intensity:
-            self.predictor = torch.nn.Linear(128, 1)
+            self.predictor = torch.nn.Linear(m//4, 1)
             self.activation = torch.nn.LeakyReLU(negative_slope=0.01)
         elif self.target_intensity_cat:
-            self.predictor = torch.nn.Linear(128, 7)
+            self.predictor = torch.nn.Linear(m//4, 7)
             self.activation = torch.nn.ReLU()
         else:
-            self.predictor = torch.nn.Linear(128, 2)
+            self.predictor = torch.nn.Linear(m//4, 2)
             self.activation = torch.nn.ReLU()
     
     def forward(self, x_viz, x_stat):
@@ -650,6 +653,7 @@ class LINEARTransform(torch.nn.Module):
         #Flatten before passing through the linear layer
         out_enc = out_enc.flatten(start_dim=1)
         out_enc = self.linear(out_enc)
+        out_enc = self.linear_bn(out_enc)
         out_enc = self.activation(out_enc)
         out_enc = self.predictor(out_enc)
         return out_enc
