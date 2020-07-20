@@ -316,11 +316,13 @@ def main(args):
                                         allow_pickle=True).reshape(-1, args.window_size, 26)[:,:,:10])[:,-args.sub_window_size:].to(device)
     x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                        allow_pickle=True).reshape(-1, args.window_size, 26)[:,:,:10])[:,-args.sub_window_size:].to(device)
-
     x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                        allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:].to(device)
     x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                       allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:].to(device)
+    if args.sub_area > 0:
+        x_viz_train = x_viz_train[:,:,:,args.sub_area:-args.sub_area,args.sub_area:-args.sub_area]
+        x_viz_test = x_viz_test[: , :, :, args.sub_area:-args.sub_area, args.sub_area:-args.sub_area]
 
     tgt_intensity_cat_train = torch.LongTensor(np.load('data/y_train_intensity_cat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                       allow_pickle=True)).to(device)
