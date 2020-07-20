@@ -147,6 +147,12 @@ def add_data_parser(parser):
                         help='Number of data points to consider as part of a sentence.'
                         )
 
+    parser.add_argument('--sub_area',
+                        type=int,
+                        default=0,
+                        help='how much sub area to delete from 25*25 grid.'
+                        )
+
     parser.add_argument('--train_test_split',
                         type=float, 
                         default=0.8)
