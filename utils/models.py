@@ -501,7 +501,7 @@ class ENCDEC(nn.Module):
                  window_size: int):
         super(ENCDEC, self).__init__()
         self.encoder = encoder
-
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.n_in_decoder = n_in_decoder
         self.n_out_decoder = n_out_decoder
         self.hidden_config = hidden_configuration_decoder
@@ -528,7 +528,7 @@ class ENCDEC(nn.Module):
         out_prev = x
         out_hidden = []
         for rec_cell, hidden_tensor in zip(self.decoder_cells, hidden):
-            out_prev = rec_cell(out_prev, hidden_tensor)
+            out_prev = rec_cell(out_prev.to(self.device), hidden_tensor.to(self.device))
             out_hidden.append(out_prev)
         return out_prev, out_hidden
 
@@ -630,8 +630,9 @@ class LINEARTransform(torch.nn.Module):
     def __init__(self, encoder, window_size, target_intensity = False, target_intensity_cat = False):
         super(LINEARTransform, self).__init__()
         self.encoder = encoder
-        n = 64
+        n = 128
         m = n * window_size
+        self.bn = nn.BatchNorm1d(n*window_size)
         self.linear = torch.nn.Linear(n * window_size, m//4)
         self.linear_bn = nn.BatchNorm1d(m//4)
         self.target_intensity = target_intensity
@@ -652,6 +653,7 @@ class LINEARTransform(torch.nn.Module):
         out_enc = torch.stack(out_enc).transpose(0,1) #keep batch first
         #Flatten before passing through the linear layer
         out_enc = out_enc.flatten(start_dim=1)
+        out_enc = self.bn(out_enc)
         out_enc = self.linear(out_enc)
         out_enc = self.linear_bn(out_enc)
         out_enc = self.activation(out_enc)

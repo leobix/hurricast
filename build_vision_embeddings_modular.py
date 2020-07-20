@@ -118,7 +118,7 @@ def eval(model,
                 f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline.cpu().numpy(), average='macro')
 
             if target_intensity:
-                mae += mean_absolute_error(target*std_intensity + mean_intensity, model_outputs*std_intensity + mean_intensity)
+                mae += mean_absolute_error(target*std_intensity + mean_intensity, model_outputs.cpu()*std_intensity + mean_intensity)
 
             # Keep track of the predictions/targets
             tgts['d'].append(tgt_displacement)
