@@ -102,20 +102,20 @@ def eval(model,
                 target = tgt_intensity_cat
             else:
                 target = tgt_displacement
-
+            target = target.cpu()
             batch_loss = loss_fn(model_outputs, tgt_displacement, tgt_intensity, tgt_intensity_cat)
             assert_no_nan_no_inf(batch_loss)
             total_loss += batch_loss.item()  # Do we divide by the size of the data
             total_n_eval += tgt_intensity.size(0)
 
             if target_intensity_cat:
-                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1).detach().numpy()
+                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1).detach().cpu().numpy()
                 accuracy += accuracy_score(target, class_pred)
                 f1_micro += f1_score(target, class_pred, average='micro')
                 f1_macro += f1_score(target, class_pred, average='macro')
-                accuracy_baseline += accuracy_score(target, tgt_intensity_cat_baseline)
-                f1_micro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='micro')
-                f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline, average='macro')
+                accuracy_baseline += accuracy_score(target, tgt_intensity_cat_baseline.cpu().numpy())
+                f1_micro_baseline += f1_score(target, tgt_intensity_cat_baseline.cpu().numpy(), average='micro')
+                f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline.cpu().numpy(), average='macro')
 
             if target_intensity:
                 mae += mean_absolute_error(target*std_intensity + mean_intensity, model_outputs*std_intensity + mean_intensity)
@@ -234,7 +234,7 @@ def train(model,
                 target = tgt_intensity_cat
             else:
                 target = tgt_displacement
-
+            target = target.cpu().numpy()
             batch_loss = loss_fn(
                 model_outputs, tgt_displacement, tgt_intensity, tgt_intensity_cat)
 
@@ -252,14 +252,14 @@ def train(model,
                               batch_loss.item(),
                               epoch * len(train_loader) + i)
             if target_intensity_cat:
-                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1).detach().numpy()
+                class_pred = torch.softmax(model_outputs, dim=1).argmax(dim=1).detach().cpu().numpy()
                 f1_micro = f1_score(target, class_pred, average='micro')
                 f1_macro = f1_score(target, class_pred, average='macro')
                 # f1_all =  f1_score(target, class_pred, average = None)
                 accuracy = accuracy_score(target, class_pred)
-                f1_micro_baseline = f1_score(target, tgt_intensity_cat_baseline, average='micro')
-                f1_macro_baseline = f1_score(target, tgt_intensity_cat_baseline, average='macro')
-                accuracy_baseline = accuracy_score(target, tgt_intensity_cat_baseline)
+                f1_micro_baseline = f1_score(target, tgt_intensity_cat_baseline.cpu().numpy(), average='micro')
+                f1_macro_baseline = f1_score(target, tgt_intensity_cat_baseline.cpu().numpy(), average='macro')
+                accuracy_baseline = accuracy_score(target, tgt_intensity_cat_baseline.cpu().numpy())
                 writer.add_scalar('accuracy_train',
                                   accuracy.item(),
                                   epoch * len(train_loader) + i)
@@ -339,8 +339,8 @@ def main(args):
     tgt_intensity_test = torch.Tensor(np.load('data/y_test_intensity_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                  allow_pickle=True)).to(device)
 
-    tgt_intensity_cat_baseline_train = torch.LongTensor(np.load('data/y_train_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',  allow_pickle = True)).to(device)
-    tgt_intensity_cat_baseline_test = torch.LongTensor(np.load('data/y_test_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True)).to(device)
+    tgt_intensity_cat_baseline_train = torch.LongTensor(np.load('data/y_train_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',  allow_pickle = True))
+    tgt_intensity_cat_baseline_test = torch.LongTensor(np.load('data/y_test_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True))
 
     tgt_displacement_train = torch.Tensor(np.load('data/y_train_displacement_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                      allow_pickle=True)).to(device)
