@@ -177,13 +177,6 @@ def eval(model,
                           epoch_number)
         print("\n Accuracy Eval is: ", eval_accuracy)
         print("\n Accuracy Eval Baseline is: ", accuracy_baseline.item() / len(loop))
-        print("\n Best accuracy so far was: ", best_accuracy)
-        if args.save and eval_accuracy > best_accuracy :
-            torch.save(model.state_dict(), osp.join(args.output_dir, 'best_model.pt'))
-            best_accuracy = eval_accuracy
-            print("\n Model has been saved.")
-
-
 
     model.train()
     return model, total_loss, total_n_eval
