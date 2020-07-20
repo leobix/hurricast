@@ -181,7 +181,7 @@ def eval(model,
         if args.save and eval_accuracy > best_accuracy :
             torch.save(model.state_dict(), osp.join(args.output_dir, 'best_model.pt'))
             best_accuracy = eval_accuracy
-            print("\n Model has been savec.")
+            print("\n Model has been saved.")
 
 
 
@@ -315,38 +315,37 @@ def train(model,
 
 def main(args):
     # Prepare device
-    device = torch.device(
-        f'cuda:{args.gpu_nb}' if torch.cuda.is_available() and args.gpu_nb != -1 else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(' Prepare the training using ', device)
     # Load files and reformat.
 
     x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                        allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])[:,-args.sub_window_size:]
+                                        allow_pickle=True).reshape(-1, args.window_size, 26)[:,:,:11])[:,-args.sub_window_size:].to(device)
     x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                       allow_pickle=True).reshape(-1, args.window_size, 25)[:,:,:11])[:,-args.sub_window_size:]
+                                       allow_pickle=True).reshape(-1, args.window_size, 26)[:,:,:11])[:,-args.sub_window_size:].to(device)
 
     x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                       allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:]
+                                       allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:].to(device)
     x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                      allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:]
+                                      allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:].to(device)
 
     tgt_intensity_cat_train = torch.LongTensor(np.load('data/y_train_intensity_cat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                      allow_pickle=True))
+                                      allow_pickle=True)).to(device)
     tgt_intensity_cat_test = torch.LongTensor(np.load('data/y_test_intensity_cat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                     allow_pickle=True))
+                                     allow_pickle=True)).to(device)
 
     tgt_intensity_train = torch.Tensor(np.load('data/y_train_intensity_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                  allow_pickle=True))
+                                  allow_pickle=True)).to(device)
     tgt_intensity_test = torch.Tensor(np.load('data/y_test_intensity_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                 allow_pickle=True))
+                                 allow_pickle=True)).to(device)
 
-    tgt_intensity_cat_baseline_train = torch.LongTensor(np.load('data/y_train_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',  allow_pickle = True))
-    tgt_intensity_cat_baseline_test = torch.LongTensor(np.load('data/y_test_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True))
+    tgt_intensity_cat_baseline_train = torch.LongTensor(np.load('data/y_train_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',  allow_pickle = True)).to(device)
+    tgt_intensity_cat_baseline_test = torch.LongTensor(np.load('data/y_test_intensity_cat_baseline_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True)).to(device)
 
     tgt_displacement_train = torch.Tensor(np.load('data/y_train_displacement_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                     allow_pickle=True))
+                                     allow_pickle=True)).to(device)
     tgt_displacement_test = torch.Tensor(np.load('data/y_test_displacement_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                    allow_pickle=True))
+                                    allow_pickle=True)).to(device)
 
 
     args.window_size = args.sub_window_size
@@ -467,6 +466,7 @@ def main(args):
                                    std_intensity=std_intensity,
                                    scheduler=None,
                                    l2_reg=args.l2_reg,
+                                   device = device,
                                    target_intensity=args.target_intensity,
                                    target_intensity_cat=args.target_intensity_cat)
     plt.plot(loss)
