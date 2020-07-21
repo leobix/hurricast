@@ -24,12 +24,16 @@ def numeric_data(data):
         data[i]=data[i].interpolate(method='linear')
     return data
 
-def smooth_day(df):
+def smooth_features(df):
     df['ISO_TIME'] = pd.to_datetime(df['ISO_TIME'], format= '%Y-%m-%d %H:%M:%S')
     df['cos_day'] = np.cos(2 * np.pi * df['ISO_TIME'].dt.day / 365)
     df['sin_day'] = np.sin(2 * np.pi * df['ISO_TIME'].dt.day / 365)
     df['COS_STORM_DIR'] = np.cos(2 * np.pi * df['STORM_DIR'] / 360)
     df['SIN_STORM_DIR'] = np.sin(2 * np.pi * df['STORM_DIR'] / 360)
+    df['COS_LAT'] = np.cos(2 * np.pi * df['LAT'] / 360)
+    df['SIN_LAT'] = np.sin(2 * np.pi * df['LAT'] / 360)
+    df['COS_LON'] = np.cos(2 * np.pi * df['LON'] / 360)
+    df['SIN_LON'] = np.sin(2 * np.pi * df['LON'] / 360)
     df = df.drop('STORM_DIR', axis=1)
 
     #df.loc[(df['ISO_TIME'].dt.hour <=11) & (df['ISO_TIME'].dt.hour >=0),'sign_day'] = 1
@@ -393,7 +397,7 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     # transform data from String to numeric
     df0 = numeric_data(df0)
     # smooth cos & sign of day
-    df0 = smooth_day(df0)
+    df0 = smooth_features(df0)
     # add wind category
     df0['wind_category'] = df0.apply(lambda x: sust_wind_to_cat_val(x['WMO_WIND']), axis=1)
     if one_hot:
