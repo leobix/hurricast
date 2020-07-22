@@ -431,6 +431,7 @@ class CNNEncoder(nn.Module):
         assert isinstance(hidden_configuration, tuple)
         self.hidden_configuration = hidden_configuration
         self.layers = self.create_cells()
+        self.init_weights()
 
     def create_vision_cell(self, n_in, n_out):
         cell = [nn.Conv2d(in_channels=n_in,
@@ -482,8 +483,25 @@ class CNNEncoder(nn.Module):
         return self.layers(x)
 
     def init_weights(self):
-        #TODO: Ask whether we need to create some init. methods really?
-        return NotImplementedError
+        for idx, m in enumerate(self.modules()):
+            if isinstance(m, nn.Conv2d) and idx == 1:
+                nn.init.xavier_normal_(m.weight, gain=1)
+                nn.init.normal_(m.bias, mean=0, std=1)
+            if isinstance(m, nn.Conv2d) and idx != 1:
+                nn.init.xavier_normal_(m.weight, gain=math.sqrt(2))
+                nn.init.normal_(m.bias, mean=0, std=1)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm1d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear) and idx == 1:
+                nn.init.xavier_normal_(m.weight, gain=1)
+                nn.init.normal_(m.bias, mean=0, std=1)
+            elif isinstance(m, nn.Linear) and idx != 1:
+                nn.init.xavier_normal_(m.weight, gain=math.sqrt(2))
+                nn.init.normal_(m.bias, mean=0, std=1)
 
 
 class ENCDEC(nn.Module):
