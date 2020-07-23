@@ -312,6 +312,56 @@ def repad(t):
                 t[i,:,j]=t[i,:,ind-1]
     return t
 
+#function to get forecast of hurricane based on name and year
+def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
+    try:
+        storm = hurdat.get_storm((name, year))
+        forecast = storm.get_operational_forecasts()
+        #choose models
+        model_list = set(['HWRF','SHIP', 'AEMI','CLAP5','EMXI','CMC']).intersection(forecast.keys())
+        #create empty df
+        df_out = pd.DataFrame(columns=['datetime'])
+        for model in model_list:
+            df_model = pd.DataFrame()
+            for time in forecast[model]:
+                df = pd.DataFrame(forecast[model][time])
+                temp = df.loc[df['fhr']==pred]
+                #select columns
+                temp = temp[['lat','lon','vmax','mslp']]
+                temp = temp.add_prefix(str(model)+'_'+str(pred)+'_')
+                temp['datetime'] = pd.to_datetime(time, format = '%Y%m%d%H')
+                df_model = pd.concat([df_model, temp], axis=0)
+            df_out = df_out.merge(df_model, on='datetime', how='outer')
+        df_out = df_out.sort_values(by='datetime')
+    except:
+        # print('no forecast for', name, year)
+        df_out = pd.DataFrame(columns=['datetime'])
+    return df_out
+
+ def join_forecast(df, pred=24):
+    print('joining forecast data')
+    # read hurdat data set for both basins: north atlantic and east pacific
+    hurdat = tracks.TrackDataset(basin='both',source='hurdat',include_btk=False)
+    #get list of storm names and year
+    df['NAME'] = df['NAME'].str.lower()
+    df['YEAR'] = df['ISO_TIME'].dt.year
+    storm_list= df.loc[df['BASIN'].isin(['NA','EP'])] #north atlantic and east pacific
+    storm_list = storm_list[['NAME','YEAR']].drop_duplicates() #get list of storm names and year
+    storm_list.reset_index(inplace=True, drop=True)
+
+    for i in range(len(storm_list)):
+        name  =storm_list['NAME'][i]
+        year = storm_list['YEAR'][i]
+        #get forecast for particular storm
+        df_forecast = get_forecast(hurdat, name, year, pred)
+        #join with dataframe
+        df_forecast['NAME']= name
+        df_out = df.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])    
+    #drop added columns
+    df_out.drop(['NAME','datetime','YEAR'], inplace=True )
+    return df_out
+
+
 
 
 def prepare_data(path = "/data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
@@ -393,11 +443,13 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
     # select interesting columns
-    df0 = data[['SID', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+    df0 = data[['SID','NAME', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
     # transform data from String to numeric
     df0 = numeric_data(df0)
     # smooth cos & sign of day
     df0 = smooth_features(df0)
+    #join forecast
+    df0 = join_forecast(df0)
     # add wind category
     df0['wind_category'] = df0.apply(lambda x: sust_wind_to_cat_val(x['WMO_WIND']), axis=1)
     if one_hot:
@@ -406,7 +458,6 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
         df0 = add_one_hot(df0, data['NATURE'], 'nature')
         #add category one_hot
         #df0 = add_one_hot(df0, df0['wind_category'], 'category')
-    # df0 = add_one_hot(data, df0)
     print('df0 columns :', df0.columns)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
