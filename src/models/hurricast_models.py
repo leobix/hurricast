@@ -16,7 +16,7 @@ import torch.nn as nn
 import math
 import warnings
 import sys
-from factory import MODEL_REGISTRY, RegisterModel
+from .factory import MODEL_REGISTRY, RegisterModel
 #==========================
 # New versions of our layers
 @RegisterModel('CNNEncoder')

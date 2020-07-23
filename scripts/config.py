@@ -26,7 +26,6 @@ class TransformerConfig:
     n_out_transformer: int
     n_out_decoder: Any=None #Need to defined later
                             #(depends on the task)
-    
     window_size: Any=None
 
 @dataclass
@@ -52,6 +51,7 @@ encoder_config = dict(
         ('fc', 128)
     ))
 
+ 
 encdec_config = dict(
     n_in_decoder=128 + 10,
     n_out_decoder=None, 

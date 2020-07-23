@@ -43,7 +43,7 @@ def evaluate(model,
     preds, true_preds = get_predictions(model, iterator, task=task, return_pt=True)
     #2.
     out_metrics = metrics_func(preds=preds, target=true_preds)
-    out_loss = loss_fn(x=preds, y=true_preds)
+    out_loss = loss_fn(preds, true_preds)
     return preds, true_preds, out_loss, out_metrics    
 #================================
 #Train

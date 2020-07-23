@@ -8,16 +8,18 @@ from typing import Dict, List
 
 """
 #IMPORTANT TODO.
-1. Remove the baseline from the named tensors and add a special option.
-2. Write documentation !
-3. Add argument to save the processed tensors beforehand.
+1.. Add WeightedSampler
+2. Remove the baseline from the named tensors and add a special option.
+3. Write documentation !
+4. Add argument to save the processed tensors beforehand.
+
 
 #Secondary TODO:
 1. Add typing (safer).
 2. Add memory buffer + pinning for the loaders (faster computation)
 """
 #TODO: Add mixture intensity + displacement
-accepted_modes = {
+accepted_modes = {  # Modes and associated target vars.
     'intensity': 'tgt_intensity',
     'displacement': 'tgt_displacement',
     'intensity_cat': 'tgt_intensity_cat',
@@ -39,7 +41,7 @@ def CheckMode(func):
         Try to use the wrong mode argument.\
         {} is not supported.\
         Please choose among {}".format(mode,
-                                       list(accepted_mode.keys()))
+                                       list(accepted_modes.keys()))
         out = func(*fargs, **fkwargs)
         return out
     return decorator
