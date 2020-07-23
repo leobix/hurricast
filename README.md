@@ -57,4 +57,16 @@ modes = {#Modes and associated tasks
 }
 ```
 
+The **model creation** is wrapped up in the src/models/factory.py file. 
+The different models are in the src/models/hurricast_models.py, and each model should be "registered" before being used (with a simple decorator.)
+Example:
+```py
+@RegisterModel('TRANSFORMER')
+class TRANSFORMER(nn.Module):
+  ...
+```
 
+The baselines and older versions are now in a separate file (baselines.py).
+The file experimental_models.py is still experimental, but class inheritance will probably allow us to do something cool I hope :sunglass:
+
+The training curriculum is more modular, but mostly unchanged (see notebook)

@@ -1,7 +1,7 @@
 NO_REGISTRY_ERR = "Model {} not in MODEL_REGISTRY! Available models are {}"
 
+#global MODEL_REGISTRY
 MODEL_REGISTRY = {}
-
 
 def RegisterModel(name):
     """Registers a model."""
@@ -11,14 +11,13 @@ def RegisterModel(name):
         return f
     return decorator
 
-
 #======================
 def get_model(mode, encoder_config, decoder_config, args):
     #Needs to upload window size and _OUT_DECODER
     #Get some
     assert (int(args.encdec) + int(args.transformer) < 2), "\
     Only one of encdec or transformer can be specified"
-
+    #print(MODEL_REGISTRY)
     _encoder = MODEL_REGISTRY['CNNEncoder']
     if args.encdec:
         _model = MODEL_REGISTRY['ENCDEC']
@@ -60,3 +59,5 @@ def get_model(mode, encoder_config, decoder_config, args):
             config_ += "{}\n".format(config__)
         args.writer.add_text('Configs', config_)
     return model
+
+#MODEL_REGISTRY = {**MODEL_REGISTRY, .hurricast_models.MODEL_REGISTRY}

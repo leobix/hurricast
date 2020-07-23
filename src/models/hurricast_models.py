@@ -16,7 +16,10 @@ import torch.nn as nn
 import math
 import warnings
 import sys
-from .factory import MODEL_REGISTRY, RegisterModel
+from src.models.factory import RegisterModel#, MODEL_REGISTRY
+
+#MODEL_REGISTRY = {}
+
 #==========================
 # New versions of our layers
 @RegisterModel('CNNEncoder')
@@ -208,6 +211,7 @@ TODO: Add a simple wrapper around a recurrent torch recurrent model
 2. Fusion module that can concatenate image and stat data 
 3. The decoder: Could be a Transformer/RNN/or anything that maps bs, T, H --> Class
 '''
+
 
 class ExperimentalENCDEC(nn.Module):
     def __init__(self):

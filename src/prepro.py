@@ -392,7 +392,8 @@ def create_loaders(mode: str,
                     batch_size: int,
                     train_test_split: float, 
                     predict_at: int, 
-                    window_size: int):
+                    window_size: int, 
+                    debug:bool=False):
     """
     #TODO: Write small doc
     """
@@ -417,7 +418,10 @@ def create_loaders(mode: str,
     #Unroll in tensordataset
     train_ds = TensorDataset(*train_tensors.values())
     test_ds = TensorDataset(*test_tensors.values())
-    
+    if debug:
+        N_DEBUG = 200
+        train_ds = train_ds[:N_DEBUG]
+        test_ds = test_ds[:N_DEBUG]
     #Create collate_fn 
     collate_fn = create_collate_fn()
 

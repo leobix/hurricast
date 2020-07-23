@@ -67,9 +67,12 @@ def _write_histograms(writer, preds, targets, epoch_number, mode):
 
 def _write_metrics(writer, metrics_dict, global_step, mode):
     for name, item in metrics_dict.items():
-        writer.add_scalar(name,
+        try:
+            writer.add_scalar(name,
                           item,
                           global_step)
+        except Exception as e:
+            print('Could not write {} due to {}'.format(name, e))
 
 
 def _write_list(writer, loss_list, global_step, name):
