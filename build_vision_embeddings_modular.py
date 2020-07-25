@@ -117,7 +117,7 @@ def eval(model,
                 f1_micro_baseline += f1_score(target, tgt_intensity_cat_baseline.cpu().numpy(), average='micro')
                 f1_macro_baseline += f1_score(target, tgt_intensity_cat_baseline.cpu().numpy(), average='macro')
 
-            if target_intensity:
+            elif target_intensity:
                 mae += mean_absolute_error(target*std_intensity + mean_intensity, model_outputs.cpu()*std_intensity + mean_intensity)
 
             # Keep track of the predictions/targets
@@ -155,7 +155,7 @@ def eval(model,
                           epoch_number)
         print("\n MAE Eval is: ", mae_eval)
 
-    if target_intensity_cat:
+    elif target_intensity_cat:
         eval_accuracy = accuracy.item() / len(loop)
         writer.add_scalar('eval_accuracy',
                           eval_accuracy,
@@ -177,6 +177,9 @@ def eval(model,
                           epoch_number)
         print("\n Accuracy Eval is: ", eval_accuracy)
         print("\n Accuracy Eval Baseline is: ", accuracy_baseline.item() / len(loop))
+
+    else:
+        pri
 
     model.train()
     return model, total_loss, total_n_eval
@@ -313,9 +316,9 @@ def main(args):
     # Load files and reformat.
 
     x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                        allow_pickle=True).reshape(-1, args.window_size, 26)[:,:,:10])[:,-args.sub_window_size:].to(device)
+                                        allow_pickle=True).reshape(-1, args.window_size, 30)[:,:,:10])[:,-args.sub_window_size:].to(device)
     x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                       allow_pickle=True).reshape(-1, args.window_size, 26)[:,:,:10])[:,-args.sub_window_size:].to(device)
+                                       allow_pickle=True).reshape(-1, args.window_size, 30)[:,:,:10])[:,-args.sub_window_size:].to(device)
     x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                        allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:].to(device)
     x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',

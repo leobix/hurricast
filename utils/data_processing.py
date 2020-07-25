@@ -1,6 +1,6 @@
 from __future__ import print_function
 import pandas as pd
-
+import tropycal.tracks as tracks
 import math
 
 import torch
@@ -144,6 +144,30 @@ def add_displacement_lat_lon2(dict0):
     return dict1
 
 
+def add_displacement_distance_km(dict0):
+    dict1 = {}
+    # loop over each dataframe
+    for i in dict0:
+        df = dict0[i]
+        #         #reset index
+        df.reset_index(inplace=True, drop=True)
+        lst_lat = [0]
+        lst_lon = [0]
+        for j in range(1, len(df)):
+            lat_j, lon_j = df['LAT'][j], df['LON'][j]
+            if lat_j == 0 and lon_j == 0:
+                d_lat = 0
+                d_lon = 0
+            else:
+                d_lat = df['LAT'][j] - df['LAT'][j - 1]
+                d_lon = df['LON'][j] - df['LON'][j - 1]
+            lst_lat.append(d_lat)
+            lst_lon.append(d_lon)
+        df['DISPLACEMENT_LAT'] = lst_lat
+        df['DISPLACEMENT_LON'] = lst_lon
+        dict1[i] = df
+    return dict1
+
 #function to calculate tensor shape
     #input: dictionary of storm data
 def tensor_shape(dict0):
@@ -212,19 +236,19 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
 
 #function to query dataset and join available forecasts
 # predicted time (pred is the number of hours of forecast ahead)
- def join_forecast(df, pred=24):
+def join_forecast(df, pred=24):
     print('joining forecast data')
     # read hurdat data set for both basins: north atlantic and east pacific
     hurdat = tracks.TrackDataset(basin='both',source='hurdat',include_btk=False)
     #get list of storm names and year
     df['NAME'] = df['NAME'].str.lower()
     df['YEAR'] = df['ISO_TIME'].dt.year
-    storm_list= df.loc[df['BASIN'].isin(['NA','EP'])] #north atlantic and east pacific
+    storm_list= df.loc[df['BASIN'].isin(['AN','EP'])] #north atlantic and east pacific
     storm_list = storm_list[['NAME','YEAR']].drop_duplicates() #get list of storm names and year
     storm_list.reset_index(inplace=True, drop=True)
 
     for i in range(len(storm_list)):
-        name  =storm_list['NAME'][i]
+        name  = storm_list['NAME'][i]
         year = storm_list['YEAR'][i]
         #get forecast for particular storm
         df_forecast = get_forecast(hurdat, name, year, pred)
@@ -232,7 +256,9 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
         df_forecast['NAME']= name
         df_out = df.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])
     #drop added columns
-    df_out.drop(['NAME','datetime','YEAR'], inplace=True )
+    df_out.drop('NAME', axis=1, inplace=True)
+    df_out.drop('datetime', axis=1, inplace=True)
+    df_out.drop('YEAR', axis=1, inplace=True)
     return df_out
 
 
@@ -241,7 +267,7 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
     # select interesting columns
-    df0 = data[['SID','NAME', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+    df0 = data[['SID','NAME', 'BASIN', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
     # transform data from String to numeric
     df0 = numeric_data(df0)
     # smooth cos & sign of day
@@ -251,6 +277,7 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     if forecast:
         #join forecast
         df0 = join_forecast(df0)
+        print('df0 columns :', df0.columns)
     if one_hot:
         #adding BASIN and NATURE feature as a one hot
         df0 = add_one_hot(df0, data['BASIN'], 'basin')
@@ -361,17 +388,17 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
 # def select_data(data):
 #     return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
 
-# def get_distance_km(lon1, lat1, lon2, lat2):
-#     '''
-#     Using haversine formula (https://www.movable-type.co.uk/scripts/latlong.html)
-#     '''
-#     R=6371e3 # meters (earth's radius)
-#     phi_1=math.radians(lat1)
-#     phi_2 = math.radians(lat2)
-#     delta_phi=math.radians(lat2-lat1)
-#     delta_lambda=math.radians(lon2-lon1)
-#     a=np.power(math.sin(delta_phi/2),2) + math.cos(phi_1)*math.cos(phi_2)\
-#       * np.power(math.sin(delta_lambda/2),2)
+def get_distance_km(lon1, lat1, lon2, lat2):
+     '''
+     Using haversine formula (https://www.movable-type.co.uk/scripts/latlong.html)
+     '''
+     R=6371e3 # meters (earth's radius)
+     phi_1=math.radians(lat1)
+     phi_2 = math.radians(lat2)
+     delta_phi=math.radians(lat2-lat1)
+     delta_lambda=math.radians(lon2-lon1)
+     a=np.power(math.sin(delta_phi/2),2) + math.cos(phi_1)*math.cos(phi_2)\
+       * np.power(math.sin(delta_lambda/2),2)
 #     c= 2 * math.atan2(math.sqrt(a),math.sqrt(1-a))
 #
 #     return R*c/1000.
@@ -393,30 +420,6 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
 #         dict1[i]=df
 #     return dict1
 
-
-# def add_displacement_distance_km(dict0):
-#     dict1={}
-#     #loop over each dataframe
-#     for i in dict0:
-#         df=dict0[i]
-#         #reset index
-#         df.reset_index(inplace=True, drop=True)
-#         lst_lat = [0]
-#         lst_lon = [0]
-#         for j in range(1,len(df)):
-#             lat_j, lon_j = df['LAT'][j], df['LON'][j]
-#             if lat_j==0 and lon_j == 0:
-#                 d_lat = 0
-#                 d_lon = 0
-#             else:
-#                 d_lat = df['LAT'][j] - df['LAT'][j-1]
-#                 d_lon = df['LON'][j] - df['LON'][j-1]
-#             lst_lat.append(d_lat)
-#             lst_lon.append(d_lon)
-#         df['DISPLACEMENT_LAT'] = lst_lat
-#         df['DISPLACEMENT_LON'] = lst_lon
-#         dict1[i]=df
-#     return dict1
 
 # #Geographical difference features: i.e. feature_1(t) = feature(t)-feature(0)
 #     # features: LAT, LON, DIST2LAND
