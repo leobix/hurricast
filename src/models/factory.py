@@ -24,7 +24,7 @@ def get_model(mode, encoder_config, decoder_config, args):
     elif args.transformer:
         _model = MODEL_REGISTRY['TRANSFORMER']
     else:
-        model = MODEL_REGISTRY['LINEARTransform']
+        _model = MODEL_REGISTRY['LINEARTransform']
 
     N_OUT_DECODER = 7 if mode == 'intensity_cat' else (
         2 - (mode == 'intensity'))  # 7 classes of storms if categorical
