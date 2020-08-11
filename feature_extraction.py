@@ -9,7 +9,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import  GridSearchCV
 
 from julia import Julia
-Julia(sysimage='../sys.so')
+Julia(sysimage='../sys.so', compiled_modules = False)
 from interpretableai import iai
 
 window_size = 8
@@ -30,7 +30,8 @@ tgt_intensity_test = np.load('data/y_test_intensity_1980_34_20_120_w' + str(wind
 
 
 names = ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
-         'STORM_SPEED', 'cat_cos_day', 'cat_sign_day', 'COS_STORM_DIR', 'SIN_STORM_DIR', 'cat_storm_category', 'cat_basin_AN',
+         'STORM_SPEED', 'cat_cos_day', 'cat_sign_day', 'COS_STORM_DIR', 'SIN_STORM_DIR',
+         'COS_LAT', 'SIN_LAT', 'COS_LON', 'SIN_LON', 'cat_storm_category', 'cat_basin_AN',
          'cat_basin_EP', 'cat_basin_NI', 'cat_basin_SA',
          'cat_basin_SI', 'cat_basin_SP', 'cat_basin_WP', 'cat_nature_DS', 'cat_nature_ET',
          'cat_nature_MX', 'cat_nature_NR', 'cat_nature_SS', 'cat_nature_TS',
@@ -39,7 +40,7 @@ names = ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
 names_all = names * window_size
 
 for i in range(len(names_all)):
-    names_all[i] += '_' + str(i // 26)
+    names_all[i] += '_' + str(i // 30)
 
 X_train = pd.DataFrame(X_train)
 X_test = pd.DataFrame(X_test)
@@ -93,12 +94,12 @@ grid = iai.GridSearch(
     iai.OptimalFeatureSelectionRegressor(
         random_seed=1,
     ),
-    sparsity=range(90, 120, 5),
+    sparsity=range(110, 130, 3),
 )
 
 grid.fit(X_train, tgt_intensity_train)
 y_hat_intensity = grid.predict(X_test)
-print("MAE intensity: ", mean_absolute_error(tgt_intensity_test, y_hat_intensity)*1.852)
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test, y_hat_intensity))
 
 numeric_weights, categoric_weights = grid.get_prediction_weights()
 
