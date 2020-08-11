@@ -209,12 +209,12 @@ def repad(t):
     return t
 
 #function to get forecast of hurricane based on name and year
-def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
+def get_forecast(hurdat, name, year, pred): #pred: hours prediction
     try:
         storm = hurdat.get_storm((name, year))
         forecast = storm.get_operational_forecasts()
         #choose models
-        model_list = set(['HWRF','SHIP', 'AEMI','CLAP5','EMXI','CMC']).intersection(forecast.keys())
+        model_list = set(['NAM','AP01','HWRF','SHIP', 'AEMI','CLAP5','EMXI','CMC']).intersection(forecast.keys())
         #create empty df
         df_out = pd.DataFrame(columns=['datetime'])
         for model in model_list:
@@ -230,44 +230,57 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
             df_out = df_out.merge(df_model, on='datetime', how='outer')
         df_out = df_out.sort_values(by='datetime')
     except:
-        # print('no forecast for', name, year)
+        print('no forecast for', name, year)
         df_out = pd.DataFrame(columns=['datetime'])
     return df_out
 
+
 #function to query dataset and join available forecasts
-# predicted time (pred is the number of hours of forecast ahead)
+# # join_forecast:
 def join_forecast(df, pred=24):
     print('joining forecast data')
+    #create a dataframe to store joined data
+    df_all= pd.DataFrame()
+
     # read hurdat data set for both basins: north atlantic and east pacific
     hurdat = tracks.TrackDataset(basin='both',source='hurdat',include_btk=False)
+
     #get list of storm names and year
     df['NAME'] = df['NAME'].str.lower()
     df['YEAR'] = df['ISO_TIME'].dt.year
-    storm_list= df.loc[df['BASIN'].isin(['AN','EP'])] #north atlantic and east pacific
-    storm_list = storm_list[['NAME','YEAR']].drop_duplicates() #get list of storm names and year
+    #select only north atlantic and east pacific basins
+    # df= df.loc[df['BASIN'].isin(['NA','EP'])]
+    storm_list = df[['SID','NAME','YEAR']].drop_duplicates() #get list of storm names and year
     storm_list.reset_index(inplace=True, drop=True)
 
     for i in range(len(storm_list)):
-        name  = storm_list['NAME'][i]
-        year = storm_list['YEAR'][i]
+        SID = storm_list['SID'][i]
+        name = storm_list['NAME'][i]
+        year= storm_list['YEAR'][i]
         #get forecast for particular storm
         df_forecast = get_forecast(hurdat, name, year, pred)
-        #join with dataframe
-        df_forecast['NAME']= name
-        df_out = df.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])
-    #drop added columns
-    df_out.drop('NAME', axis=1, inplace=True)
-    df_out.drop('datetime', axis=1, inplace=True)
-    df_out.drop('YEAR', axis=1, inplace=True)
-    return df_out
+        #get stat data for particular storm
+        df_stat = df.loc[df['NAME']==name]
+        if df_forecast.shape[0]>0:
+            #join with dataframe
+            df_forecast['NAME']= name
+            df_joined = df_stat.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])
+            df_joined.drop('datetime', axis=1, inplace=True)
+            df_all = pd.concat([df_all, df_joined], axis=0)
+        else:
+            df_all = pd.concat([df_all, df_stat], axis=0)
 
+    #drop added columns
+    df_all.drop(['NAME','YEAR'], inplace=True, axis=1)
+    print("The dataframe of storms with forecast has been created.")
+    return df_all
 
 def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_steps=15,
                   max_steps=120, get_displacement=True, forecast=True, one_hot = True):
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
     # select interesting columns
-    df0 = data[['SID','NAME', 'BASIN', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+    df0 = data[['SID','BASIN','NAME', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
     # transform data from String to numeric
     df0 = numeric_data(df0)
     # smooth cos & sign of day
@@ -281,9 +294,11 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
     if one_hot:
         #adding BASIN and NATURE feature as a one hot
         df0 = add_one_hot(df0, data['BASIN'], 'basin')
-        df0 = add_one_hot(df0, data['NATURE'], 'nature')
+        df0.drop(['BASIN'], axis=1, inplace=True)
+        # df0 = add_one_hot(df0, data['NATURE'], 'nature')
         #add category one_hot
         #df0 = add_one_hot(df0, df0['wind_category'], 'category')
+
     print('df0 columns :', df0.columns)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
