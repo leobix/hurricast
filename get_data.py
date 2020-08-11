@@ -1,16 +1,8 @@
 from run import Prepro
 import numpy as np
 
-
-
-<<<<<<< Updated upstream
 import argparse
-=======
 ####
-vision_data = np.load('data/vision_data_50_20_90_1980_v3.npy', allow_pickle = True)
-y = np.load('data/y_50_20_90_1980_v3.npy', allow_pickle = True)
->>>>>>> Stashed changes
-
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument("--window_size", type=int, default=8,
