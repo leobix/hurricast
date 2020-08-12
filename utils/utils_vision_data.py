@@ -1,8 +1,8 @@
 import cdsapi
 import numpy as np
 import netCDF4
-import matplotlib.pyplot as plt
 from datetime import datetime
+import pandas as pd
 from utils.data_processing import *
 import os
 import warnings; warnings.simplefilter('ignore')
@@ -28,12 +28,29 @@ def process_netcdf(filepath, param):
     return grid
 
 
+def prepare_data2(path="./data/last3years.csv", min_wind=34, min_steps=20, max_steps=120):
+    data = pd.read_csv(path)
+    # select interesting columns
+    df0 = select_data(data)
+    # transform data from String to numeric
+    df0 = numeric_data(df0)
+    # get a dict with the storms with a windspeed greater to a threshold
+    storms = sort_storm(df0, min_wind, min_steps)
+    # pad the trajectories to a fix length
+    d = pad_traj(storms, max_steps)
+    # print the shape of the tensor
+    m, n, t_max, t_min, t_hist = tensor_shape(d)
+    # create the tensor
+    t, p_list = create_tensor(d, m)
+    return t[:, 2:5, :]
+
+
 def get_storms(extraction = False, min_wind = 30, min_steps= 20, max_steps=60, path = "since1980.csv"):
     '''
     returns an array of elements of type [datetime, lat, lon]
     set extraction to True if used for downloading data and False if used to convert netcdf files to tensor
     '''
-    data = prepare_data2(path = path, min_wind = min_wind, min_steps= min_steps, max_steps=max_steps, one_hot = False, secondary = False)
+    data = prepare_data2(path = path, min_wind = min_wind, min_steps= min_steps, max_steps=max_steps)
     e = data.transpose((2,0,1))
     d = e.reshape(e.shape[0]*e.shape[1],3)
     for t in d:
@@ -63,10 +80,10 @@ def get_storm_vision(storm, epsilon = 0):
     epsilon is a parameter in case there is a scenario whith not correct grid size
     '''
     l = np.zeros((len(storm), 3, 3, 25, 25))
-    for i in range(len(storm)):
-        time, lat, lon = storm[i]
+    for t in range(len(storm)):
+        time, lat, lon = storm[t]
         try :
-            l[i]=get_timestep_vision(time, lat, lon)
+            l[t]=get_timestep_vision(time, lat, lon)
         except:
             try :
                 b = get_timestep_vision(time, lat, lon)
@@ -96,8 +113,8 @@ def get_filename(pressure, params, time, lat, lon):
     params_str = '_'.join(map(str, params))
     pressure_str = '_'.join(map(str, pressure))
     year, month, day, hour = str(time.year), str(time.month), str(time.day), str(time.hour)
-    #TODO Change here in case
-    return '../../../Volumes/Untitled/data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
+    #TODO Change here in case '../../../Volumes/Untitled/data_era/'
+    return './data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
 
 
 

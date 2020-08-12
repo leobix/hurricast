@@ -275,7 +275,7 @@ def join_forecast(df, pred=24):
     print("The dataframe of storms with forecast has been created.")
     return df_all
 
-def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_steps=15,
+def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
                   max_steps=120, get_displacement=True, forecast=True, one_hot = True):
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
@@ -365,43 +365,9 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=50, min_s
 #     return t3, p_list
 
 
-# def prepare_data2(path = "./data/last3years.csv", max_wind_change = 12, min_wind = 50, min_steps = 15, max_steps = 120, secondary = False, one_hot=False, dropna = False):
-#     data = pd.read_csv(path)
-#     #select interesting columns
-#     df0 = select_data(data)
-#     #transform data from String to numeric
-#     df0 = numeric_data(df0)
-#     #if dropna: df0 = df0.dropna()
-#     #add one_hot columns:
-#     if one_hot:
-#         #add one-hot storm category
-#         #df0 = add_storm_category_val(df0)
-#         df0 = add_storm_category_one_hot(df0)
-#         #transform basin and nature of the storm into one-hot vector
-#         df0 = add_one_hot(data, df0)
-#     if secondary:
-#         #add the max-wind-change column
-#         df0 = get_max_wind_change(df0, max_wind_change)
-#
-#     #get a dict with the storms with a windspeed greater to a threshold
-#     storms = sort_storm(df0, min_wind, min_steps)
-#     #pad the trajectories to a fix length
-#     d = pad_traj(storms, max_steps)
-#     #print(d)
-#     if secondary:
-#         #d = add_displacement_distance(d)
-#         d = add_displacement_lat_lon2(d)
-#     #print the shape of the tensor
-#     m, n, t_max, t_min, t_hist = tensor_shape(d)
-#     #create the tensor
-#     t, p_list = create_tensor(d, m)
-#     return t[:,2:5,:]
-
-
-
 # #allows to keep only specific columns
-# def select_data(data):
-#     return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+def select_data(data):
+     return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
 
 def get_distance_km(lon1, lat1, lon2, lat2):
      '''
@@ -414,9 +380,9 @@ def get_distance_km(lon1, lat1, lon2, lat2):
      delta_lambda=math.radians(lon2-lon1)
      a=np.power(math.sin(delta_phi/2),2) + math.cos(phi_1)*math.cos(phi_2)\
        * np.power(math.sin(delta_lambda/2),2)
-#     c= 2 * math.atan2(math.sqrt(a),math.sqrt(1-a))
-#
-#     return R*c/1000.
+     c= 2 * math.atan2(math.sqrt(a),math.sqrt(1-a))
+
+     return R*c/1000.
 #
 # #compute the displacement from t=0
 # def add_displacement_distance(dict0):
