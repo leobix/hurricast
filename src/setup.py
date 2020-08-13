@@ -142,9 +142,9 @@ def add_reformat_parser(parser):
         help="One of the registered configs")
 
 
-    parser.add_argument('--transformer',
-                        action='store_true',
-                        help="Whether you want to use the Transformer model.\
+    parser.add_argument(
+        '--transformer', action='store_true',
+        help="Whether you want to use the Transformer model.\
                         If False a recurrent model will be used.")
 
     encoder_parser = parser.add_mutually_exclusive_group()

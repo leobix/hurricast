@@ -84,3 +84,18 @@ About the "experimental model"
   
 
 
+# How to use from the command line 
+```bash
+python run_hurricast.py\
+    --mode=intensity\ #Or intensity_cat/displacement
+    --full_encoder\ #Or no_encoder/split_encoder
+    --encoder_config=full_encoder_config\ #Name of the config in config.py
+    --transformer\ #Whether we use the transformer or a recurrent model
+    --decoder_config=transformer_config\ #Name of the config in config.py
+    --y_name ...\
+    --vision_name ...\
+    --predict_at ...\
+    --window_size..\
+    --train_test_split
+    #Can add --no_stat if we want the vision data only
+```
