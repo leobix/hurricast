@@ -22,7 +22,7 @@ from src.models.factory import RegisterModel#, MODEL_REGISTRY
 
 #==========================
 # New versions of our layers
-@RegisterModel('CNNEncoder')
+#@RegisterModel('CNNEncoder')
 class CNNEncoder(nn.Module):
     """
     CNNEncoder class
@@ -124,7 +124,7 @@ class CNNEncoder(nn.Module):
         return NotImplementedError
 
 
-@RegisterModel('ENCDEC')
+#@RegisterModel('ENCDEC')
 class ENCDEC(nn.Module):
     """
     The output is just the very last hidden for now.
@@ -233,7 +233,7 @@ class ExperimentalENCDEC(nn.Module):
 
 
 
-@RegisterModel('TRANSFORMER')
+#@RegisterModel('TRANSFORMER')
 class TRANSFORMER(nn.Module):
     def __init__(self,
                  encoder,
@@ -289,7 +289,7 @@ class TRANSFORMER(nn.Module):
         return out
 
 
-@RegisterModel('LINEARTransform')
+#@RegisterModel('LINEARTransform')
 class LINEARTransform(torch.nn.Module):
     """
     Simple Net used to debug.

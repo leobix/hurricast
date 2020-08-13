@@ -1,6 +1,7 @@
 import sys
 sys.path.append("../")
-from src import prepro, models, metrics, run, setup
+from src import prepro, metrics, run, setup
+import src.models.factory as model_factory
 import config
 import torch
 
@@ -28,60 +29,19 @@ def main(args):
         window_size=args.window_size)
 
     #========================
-    if args.encdec: decoder_config = config.encdec_config
-    elif args.transformer: decoder_config = config.transformer_config
-    else: decoder_config = config.lineartransform_config
-    model = models.factory.get_model(
-        mode=args.mode, 
-        encoder_config=config.encoder_config, 
-        decoder_config=decoder_config, 
-        args=args)
-    #TODO:Clean up the model creation part.
-    #N_IN = 3 * 3
-    #N_OUT = 128
-    #N_IN_ENCODER = 128 + 10
-    #N_OUT_DECODER = 7 if args.target_intensity_cat else (
-    #    2 - args.target_intensity)  # 7 classes of storms if categorical
-    #N_OUT_TRANSFORMER = 128
-    #Encoder
-    #encoder_config = config.encoder_config
-    #encoder = models.CNNEncoder(
-    #                           n_in=N_IN,
-    #                           n_out=N_OUT,
-    #                           hidden_configuration=encoder_config)
-    #Decoder
-    #if args.encdec: 
-    #    decoder_config = config.decoder_config
-    #    model = models.ENCDEC(n_in_decoder=N_IN_ENCODER,
-    #                         n_out_decoder=N_OUT_DECODER,
-    #                         encoder=encoder,
-    #                         hidden_configuration_decoder=decoder_config,
-    #                         window_size=args.window_size)
-    #elif args.transformer:
-    #    decoder_config = config.transformer_config
-    #    model = models.TRANSFORMER(encoder,
-    #                               n_in_decoder=N_IN_ENCODER,
-    #                               n_out_decoder=N_OUT_DECODER,
-    #                              n_out_transformer=N_OUT_TRANSFORMER,
-    #                               hidden_configuration_decoder=decoder_config,
-    #                               window_size=args.window_size)
-    #else:
-    #    model = models.LINEARTransform(encoder, args.window_size, target_intensity=args.target_intensity,
-    #                                   target_intensity_cat=args.target_intensity_cat)
-    #    decoder_config = None
+    encoder_conf = config.create_config(args.encoder_config)
+    decoder_conf = config.create_config(args.decoder_config)
     
-    #writer = setup.create_board(
-    #    args, model, configs=[encoder_config, decoder_config])
-
-    #model = model.to(args.device)
-
-    #configs = [encoder_config, decoder_config]
-    #config_ = ""
-    #for config__ in configs:
-    #    config_ += "{}\n".format(config__)
-    #args.writer.add_text('Configs', config_)
-    #===================================
-    train_loss_fn, eval_loss_fn, metrics_fn = metrics.create_metrics_fn(task)
+    #=======================
+    model = model_factory.create_model(
+        mode=args.mode, 
+        encoder_config=encoder_conf,
+        decoder_config=decoder_conf, 
+        args=args)
+   
+    #====================
+    train_loss_fn, eval_loss_fn, \
+        metrics_fn = metrics.create_metrics_fn(task)
 
     print("Using model", model)
     optimizer = torch.optim.Adam(

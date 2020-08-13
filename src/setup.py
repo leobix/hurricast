@@ -66,9 +66,7 @@ def add_model_parser(parser):
                         action="store_true",
                         help='Decide if you want to use SGD over Adam')
 
-    parser.add_argument('--transformer', 
-                        action='store_true' ,
-                        help='Whether you want to use the Transformer model')
+    
 
     return parser
 
@@ -118,17 +116,63 @@ def add_data_parser(parser):
 
 
 def add_reformat_parser(parser):
-    parser.add_argument('--mode',
-                        type=str,
-                        help='The mode/task that we want to work on. \
-                            one of intensity, displacement, etc...',
-                        default='intensity_cat')
+    parser.add_argument(
+        '--mode', type=str, default='intensity_cat', 
+        help='The mode/task that we want to work on.\
+            one of intensity, displacement, etc...')
     
-    parser.add_argument('--get_training_stats', action='store_false')
+    parser.add_argument(
+        '--get_training_stats', action='store_false')
 
-    parser.add_argument('--numpy_seed', type=int, default=2020)
+    parser.add_argument(
+        '--numpy_seed', type=int, default=2020)
     
-    parser.add_argument('--torch_seed', type=int, default=0)
+    parser.add_argument(
+        '--torch_seed', type=int, default=0)
+
+    parser.add_argument(
+        '--no_stat', action='store_true', default=False)
+
+    parser.add_argument(
+        '--encoder_config', type=str, default='full_encoder_config', 
+        help="One of the registered configs")
+    
+    parser.add_argument(
+        '--decoder_config', type=str, default='transformer_config', 
+        help="One of the registered configs")
+
+
+    parser.add_argument('--transformer',
+                        action='store_true',
+                        help="Whether you want to use the Transformer model.\
+                        If False a recurrent model will be used.")
+
+    encoder_parser = parser.add_mutually_exclusive_group()
+    encoder_parser.add_argument(
+        '--full_encoder', action='store_true')
+    encoder_parser.add_argument(
+        '--split_encoder', action='store_true')
+    encoder_parser.add_argument(
+        '--no_encoder', action='store_true')
+
+    
+    
+    #parser.add_argument(
+    #    '--encoder', type=str, default=None, 
+    #    help="One of the Models registered in the model factory")
+
+
+    #parser.add_argument(
+    #
+    #)
+
+    #parser.add_argument(
+    #    '--decoder', type=str, default='ExpLSTM',
+    #    help="One of the Models registered in the model factory.\
+    #                        Common models: ExpLSTM, TRANSFORMER")
+    #parser.add_argument(
+    #   '--split_encoder', )
+    
     return parser
 
 

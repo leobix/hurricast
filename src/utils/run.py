@@ -147,7 +147,6 @@ def update_post_train_writer(writer,
                                                    #'Val_Loss': float(best_valid_loss),
                        #                            'Valid_Acc': float(best_valid_acc)})
     
-
 #========================
 #MODEL UTILS
 def get_pred_fn(task='classification'):
@@ -160,4 +159,5 @@ def get_pred_fn(task='classification'):
     get_pred = _get_pred_classification if task == 'classification' \
         else lambda z: z
     return get_pred
+
 

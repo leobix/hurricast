@@ -47,6 +47,7 @@ input (=image): bs, N_channels, H1, H2 --> bs, H_out
 We register the different encoders/decoders that can be used.
 '''
 
+
 def rec_cells(rnn_type):
     _rec_cells = dict(
         lstm=nn.LSTM, 
@@ -163,7 +164,7 @@ class CNNEncoder(nn.Module):
         return NotImplementedError
 
 
-@RegisterModel('ENCDEC')
+#@RegisterModel('ENCDEC')
 class ENCDEC(nn.Module):
     """
     The output is just the very last hidden for now.
@@ -613,7 +614,7 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-@RegisterModel('ExperimentalLINEARTransform')
+@RegisterModel('ExpLINEARTransform')
 class LINEARTransform(torch.nn.Module):
     """
     Simple Net used to debug.
@@ -725,7 +726,6 @@ def test_cnnencoder():
         print(torch.cat(out_enc).size(), '2')
     except:
         pass
-    
     
     
 

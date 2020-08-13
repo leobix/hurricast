@@ -8,7 +8,6 @@ import copy
 
 #===========================
 # Eval
-
 def get_predictions(model, iterator, task='classification', return_pt=True):
     
     assert task in ['classification', 
@@ -41,6 +40,7 @@ def evaluate(model,
             loss_fn,
             metrics_func) -> (torch.Tensor, torch.Tensor, float, dict):
     #1. Get the predictions (moved to CPU)
+    model.eval()
     preds, true_preds = get_predictions(model, iterator, task=task, return_pt=True)
     #2.
     out_metrics = metrics_func(preds=preds, target=true_preds)
@@ -232,8 +232,6 @@ def train(model,
     return best_model, optimizer, training_stats
 
    
-
-
 
 
     
