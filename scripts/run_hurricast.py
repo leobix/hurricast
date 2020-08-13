@@ -29,7 +29,7 @@ def main(args):
 
     #========================
     if args.encdec: decoder_config = config.encdec_config
-    elif args.transformer: decoder_config=config.transformer_config
+    elif args.transformer: decoder_config = config.transformer_config
     else: decoder_config = config.lineartransform_config
     model = models.factory.get_model(
         mode=args.mode, 

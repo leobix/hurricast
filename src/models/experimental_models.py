@@ -42,6 +42,9 @@ input: bs, T, H_enc --> bs, H_dec
 
 A encoder must be a model that maps:
 input (=image): bs, N_channels, H1, H2 --> bs, H_out
+
+
+We register the different encoders/decoders that can be used.
 '''
 
 def rec_cells(rnn_type):
@@ -305,7 +308,6 @@ class ExperimentalHurricast(nn.Module):
         return nn.Linear(
             self.decoder.N_OUT, self.n_pred)
         
-
 
     def _nosplit_encode(self, x_viz):
         """out_cnns: (bs, 1, H_cnn)
@@ -670,6 +672,7 @@ def test_transformer():
     out = T(input)
     print(out, out.size())
     print('Passed Test')
+
 
 def test_cnnencoder():
     input = torch.randn(32, 9, 25, 25)

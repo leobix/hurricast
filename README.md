@@ -70,3 +70,17 @@ The baselines and older versions are now in a separate file (baselines.py).
 The file experimental_models.py is still experimental, but class inheritance will probably allow us to do something cool I hope :sunglass:
 
 The training curriculum is more modular, but mostly unchanged (see notebook)
+
+____
+About the "experimental model"
+- **Image Encoder**: Any module that transforms $(BS \times  num\_channels\times H_1\times H_2) \rightarrow (BS, H_{out})$ is accepted as an encoder.
+- **Decoder**: Any module that models a sequence $(BS \times Sequence\_length \times H_{in_decoder}) \rightarrow (BS \times H_{out\_decoder})$ is an accepted decoder.
+- **Hurricast Model**: Wraps the two models above. 
+  - The Encoder can be ommited by initializing the model with a ```None``` encoder (or batching a ```None``` image).
+  - Similarly, we can decide not to use one the tabular data by specifying ```no_stats=True```
+  - The fusion of the tabular and vision data can eventually be changed.
+  - A last activation and linear layer will transform $(BS \times H_{out_decoder}) \rightarrow Activation \rightarrow (BS \times 1)$ 
+
+  
+
+
