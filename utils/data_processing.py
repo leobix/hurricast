@@ -209,7 +209,7 @@ def repad(t):
     return t
 
 #function to get forecast of hurricane based on name and year
-def get_forecast(hurdat, name, year, pred): #pred: hours prediction
+def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
     try:
         storm = hurdat.get_storm((name, year))
         forecast = storm.get_operational_forecasts()
@@ -234,9 +234,6 @@ def get_forecast(hurdat, name, year, pred): #pred: hours prediction
         df_out = pd.DataFrame(columns=['datetime'])
     return df_out
 
-
-#function to query dataset and join available forecasts
-# # join_forecast:
 def join_forecast(df, pred=24):
     print('joining forecast data')
     #create a dataframe to store joined data
@@ -248,30 +245,35 @@ def join_forecast(df, pred=24):
     #get list of storm names and year
     df['NAME'] = df['NAME'].str.lower()
     df['YEAR'] = df['ISO_TIME'].dt.year
-    #select only north atlantic and east pacific basins
-    # df= df.loc[df['BASIN'].isin(['NA','EP'])]
-    storm_list = df[['SID','NAME','YEAR']].drop_duplicates() #get list of storm names and year
+    storm_list = df[['SID','NAME','YEAR','BASIN']].drop_duplicates(['SID']) #get list of storm names and year
     storm_list.reset_index(inplace=True, drop=True)
 
     for i in range(len(storm_list)):
         SID = storm_list['SID'][i]
         name = storm_list['NAME'][i]
         year= storm_list['YEAR'][i]
-        #get forecast for particular storm
-        df_forecast = get_forecast(hurdat, name, year, pred)
+        basin = storm_list['BASIN'][i]
+
         #get stat data for particular storm
         df_stat = df.loc[df['NAME']==name]
-        if df_forecast.shape[0]>0:
-            #join with dataframe
-            df_forecast['NAME']= name
-            df_joined = df_stat.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])
-            df_joined.drop('datetime', axis=1, inplace=True)
-            df_all = pd.concat([df_all, df_joined], axis=0)
-        else:
-            df_all = pd.concat([df_all, df_stat], axis=0)
 
+        #no forecast for these basins
+        if basin in ['SP','SI','NI','WP']:
+            df_all = pd.concat([df_all, df_stat], axis=0)
+        else:
+            #try to get forecast for particular storm
+            df_forecast = get_forecast(hurdat, name, year, pred)
+            if df_forecast.shape[0]>0:
+                #join with dataframe
+                df_forecast['NAME']= name
+                df_joined = df_stat.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])
+                df_joined.drop('datetime', axis=1, inplace=True)
+                df_all = pd.concat([df_all, df_joined], axis=0)
+            else:
+                df_all = pd.concat([df_all, df_stat], axis=0)
     #drop added columns
     df_all.drop(['NAME','YEAR'], inplace=True, axis=1)
+    df_all.reset_index(inplace=True, drop=True)
     print("The dataframe of storms with forecast has been created.")
     return df_all
 
