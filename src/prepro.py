@@ -290,12 +290,16 @@ class Prepro:
         test_tensors[0] = (test_tensors[0] - m)/s
 
         #THEO: Normalize x_stat
-        #m_xstat = train_tensors[1].mean(axis=(0,1))
-        #m_xstat[7] = 0 #Dont normalize the cat
-        #s_xstat = train_tensors[1].std(axis=(0, 1))
-        #s_xstat[7] = 1 #Dont standradize the cat
-        #train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
-        #test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
+        print(train_tensors[1])
+        print(train_tensors[1][0])
+        train_tensors[1] = train_tensors[1][:,:10]
+        test_tensors[1] = test_tensors[1][:,:10]
+        m_xstat = train_tensors[1].mean(axis=(0,1))
+        m_xstat[:10] = 0 #Dont normalize the cat
+        s_xstat = train_tensors[1].std(axis=(0, 1))
+        s_xstat[:10] = 1 #Dont standardize the cat
+        train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
+        test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
 
         #Normalize velocity target
         m_velocity = train_tensors[-1].mean()
