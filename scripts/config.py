@@ -8,7 +8,7 @@ We can add some new configs and register those configs to be used in the future.
 
 #NO_REGISTRY_ERR = "Model {} not in MODEL_REGISTRY! Available models are {}"
 
-from dataclasses import dataclass
+#from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, NewType, Tuple
 
 CONFIG_REGISTRY = {}
@@ -29,6 +29,7 @@ def create_config(config_name: str)-> dict:
     assert isinstance(_config, dict)
     return _config
 
+"""
 @dataclass
 class EncoderConfig:
     n_in: int
@@ -59,7 +60,7 @@ class LINEARTransformConfig:
     window_size: Any = None
     n_out_decoder: Any=None #Need to defined later
                             #(depends on the task)
-
+"""
 
 #=========================
 # All our configs
