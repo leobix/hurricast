@@ -188,8 +188,9 @@ def create_seeds(torch_seed=0, np_seed=2020):
 
 
 def create_device(gpu_nb):
-    device = torch.device(
-        f'cuda:{gpu_nb}' if torch.cuda.is_available() and gpu_nb != -1 else 'cpu')
+    #device = torch.device(
+        #f'cuda:{gpu_nb}' if torch.cuda.is_available() and gpu_nb != -1 else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(' Prepare the training using ', device)
     return device
 
