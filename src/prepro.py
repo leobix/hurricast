@@ -129,21 +129,22 @@ class Prepro:
                                                  target_intensity_cat_baseline))  # Flatten everything
 
         #Resize X_vision
+        #TODO Be careful, everytime the format of y changes, change index
         X_vision = X_vision.flatten(start_dim=2, end_dim=3)
 
         tgt_displacement = torch.index_select(target_displacement,
                                               dim=-1,
-                                              index=torch.tensor([4,
-                                                                  5]))
+                                              index=torch.tensor([target_displacement.size(-1)-2,
+                                                                     target_displacement.size(-1)-1]))
         tgt_intensity = torch.select(target_intensity,
                                      dim=-1,
                                      index=2)
         tgt_intensity_cat = torch.select(target_intensity,
                                          dim=-1,
-                                         index=-3).type(torch.LongTensor)
+                                         index=14).type(torch.LongTensor)
         tgt_intensity_cat_baseline = torch.select(target_intensity_cat_baseline,
                                                   dim=-1,
-                                                  index=-3).type(torch.LongTensor)
+                                                  index=14).type(torch.LongTensor)
 
         train_data = dict(X_vision=X_vision.float(),
                           X_stat=X_stat.float(),
