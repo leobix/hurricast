@@ -213,10 +213,11 @@ def create_setup():
     if osp.exists(args.output_dir):
         import datetime
         now = datetime.datetime.now()
-        now_ = '{}_{}_{}_{}'.format(now.month,
+        now_ = '{}_{}_{}_{}_{}'.format(now.month,
                                     now.day,
                                     now.hour,
-                                    now.minute)
+                                    now.minute,
+                                    now.second)
 
         args.output_dir = '../results/results'+now_
     else:
