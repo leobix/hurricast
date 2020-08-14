@@ -145,7 +145,7 @@ def transformer_config_noviz():
 @RegisterConfig('lstm_config')
 def gru_config():
     return dict(
-        n_in=128+10,
+        n_in=128+30,
         hidden_dim=256,
         rnn_num_layers=2,
         N_OUT=128,
