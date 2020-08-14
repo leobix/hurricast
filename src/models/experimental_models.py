@@ -8,7 +8,7 @@ import sys
 from .factory import MODEL_REGISTRY, RegisterModel
 from typing import (Any, Callable, Dict, List,
                     NewType, Tuple, Union, Optional)
-
+from transformers import BertModel
 
 '''
 TODO: Add a simple wrapper around a recurrent torch recurrent model

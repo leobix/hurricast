@@ -1,4 +1,5 @@
 import torch
+import math
 
 accepted_modes = (
     'intensity',
@@ -91,12 +92,15 @@ def _write_list(writer, loss_list, global_step, name):
                               global_step * N + i)
 
 
+
 def write_hparams(writer, args, metric_dict, hparam_dict=None):
     hparam_list = [
-        "lr", "l2_reg",
+        "lr", 
+        "l2_reg",
         "batch_size",
-        "lr", "model", 
-        "num_epochs"]
+        "lr", 
+        "mode", 
+        "n_epochs"]
 
     if hparam_dict is None:
         hparam_dict = {}
@@ -160,4 +164,39 @@ def get_pred_fn(task='classification'):
         else lambda z: z
     return get_pred
 
+#===========================
+# Training Stats and other equivalents
+def update_all_stats(
+    all_stats, epoch_stats):
+    """
+    Update/create a dictionary.
+    """
+    #Loop through the new dict
+    for k, v in epoch_stats.items():
+        if k not in all_stats.keys():
+            all_stats[k] = []
+        if isinstance(v, list):
+            all_stats[k].extend(v)
+        elif isinstance(v, (float, int)):#, np.float32, np.float64)):
+            all_stats[k].append(v)
+        else: #If we have str for instanc 
+            pass
+    return all_stats
 
+def logging_message(epoch, start_time, end_time, train_loss, valid_loss, **kwargs):
+            
+    epoch_mins, epoch_secs = elapsed_time(start_time, end_time)
+            
+    print(
+                f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
+    print(
+                f'\tTrain Loss: {train_loss:.4f} | Train PPL: {math.exp(train_loss):7.3f}')
+    print(
+                f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+    if 'accuracy' in kwargs:
+                    
+        val_acc = kwargs['accuracy']
+        val_precision = kwargs['precision']
+        print(
+                    f'\t Val. Accuracy: {valid_loss:.3f} |  Val. Precision: {val_precision:.3f}')
+            

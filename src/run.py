@@ -1,6 +1,6 @@
 import torch 
 import tqdm
-import math
+#import math
 import time
 import os 
 from .utils import run as urun
@@ -65,6 +65,7 @@ def train_epoch(model,
     """
     if task is not None: get_pred = urun.get_pred_fn(task)
     device = next(model.parameters()).device
+    print('ON DEVICE', device)
     model.train()
     
     epoch_loss = 0.
@@ -130,8 +131,12 @@ def train(model,
     #======================
     #Begin train
     #stats = _create_stats()
-    all_train_metrics, all_eval_metrics = [], []
-    best_valid_loss = float('inf')
+    all_train_stats = {} 
+    all_eval_stats = {}
+    if task=='classification':
+        best_valid_loss = -1.
+    else: #regression
+        best_valid_loss = float('inf')
     if get_training_stats: get_training_stats = task
     model.train()
     #Train
@@ -141,7 +146,7 @@ def train(model,
     for epoch in loop:
         
         model, optimizer, train_loss,\
-        train_losses, preds, true_preds = train_epoch(
+        train_losses, preds, true_preds=train_epoch(
                                     model=model,
                                     train_iterator=train_iterator,
                                     optimizer=optimizer,
@@ -155,6 +160,8 @@ def train(model,
         
         
         train_metrics = metrics_fn(preds, true_preds)
+        all_train_stats = urun.update_all_stats(
+                    all_train_stats, {'train_loss':train_loss,'train_losses':train_losses, **train_metrics})
         
         #Eval: 
         preds, true_preds, \
@@ -164,25 +171,31 @@ def train(model,
                                     loss_fn=test_loss_fn,
                                     metrics_func=metrics_fn,
                                     task=task)
+        all_eval_stats = urun.update_all_stats(
+                   all_eval_stats , {'valid_loss': valid_loss, **eval_metrics})
 
         end_time = time.time()
-        epoch_mins, epoch_secs = urun.elapsed_time(start_time, end_time)
-    
-        if valid_loss < best_valid_loss:
-            if save:
-                torch.save(model.state_dict(), output_dir +
-                           '/model-best.pt')
+        
+        
+        if ((task=='classification') and (valid_loss > best_valid_loss)) or ((task=='regression') and (valid_loss < best_valid_loss)):
+            print('New Best model found: Epoch {} - Loss {}'.format(epoch, valid_loss))
             best_valid_loss = valid_loss
             best_model = copy.deepcopy(model)
+            if save:
+                torch.save(best_model.state_dict(), output_dir +
+                           '/model-best.pt')
         
         #UPDATE 
-        all_train_metrics.append(train_metrics)
-        all_eval_metrics.append(eval_metrics)
+        #all_train_metrics.append(train_metrics)
+        #all_eval_metrics.append(eval_metrics)
+        #Logging
+        urun.logging_message(epoch, start_time, end_time, train_loss, valid_loss, **eval_metrics)
 
         # WRITE ON BOARD WHAT WE WANT
         if writer is not None:
             urun.update_writer(
-                    writer=writer, epoch=epoch, 
+                    writer=writer, 
+                    epoch=epoch, 
                     metrics_dict=eval_metrics,
                     train_losses=train_losses,
                     train_loss=train_loss, 
@@ -192,13 +205,7 @@ def train(model,
                     N_eval=len(val_iterator),
                     mode=mode)
 
-        #Logging
-        print(
-            f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
-        print(
-            f'\tTrain Loss: {train_loss:.4f} | Train PPL: {math.exp(train_loss):7.3f}')
-        print(
-            f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+          
         
         loop.set_description('Epoch {} | Loss {}'.format(epoch,
                                                          valid_loss))
@@ -222,8 +229,8 @@ def train(model,
             hparam_metric_dict=test_metrics, hparam_dict=None)
         
     training_stats = {
-        'train_metrics': all_train_metrics, 
-        'eval_metrics': all_eval_metrics, 
+        'train_metrics': all_train_stats, 
+        'eval_metrics': all_eval_stats, 
         'test_metrics': test_metrics,
         'test_preds': test_preds,
         'test_labels': test_labels

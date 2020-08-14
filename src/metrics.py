@@ -72,21 +72,21 @@ def get_metrics(model_outputs, target, task):
     if task == 'classification':
         class_pred = get_pred(model_outputs)
 
-        print('Sanity check')
-        print(type(model_outputs))
-        print(type(class_pred))
+        #print('Sanity check')
+        #print(type(model_outputs))
+        #print(type(class_pred))
 
-        try:
-            print(model_outputs.size())
+        #try:
+        #    print(model_outputs.size())
         
-        except Exception as e:
-            print('PB1', e)
+        #except Exception as e:
+        #    print('PB1', e)
 
-        try:
-            print(class_pred.size())
+        #try:
+        #    print(class_pred.size())
 
-        except Exception as e:
-            print('PB2', e)
+        #except Exception as e:
+        #    print('PB2', e)
 
         metrics['f1_micro'] = sklearn.metrics.f1_score(
             y_true=target, y_pred=class_pred, average='micro')

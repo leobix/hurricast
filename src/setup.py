@@ -154,6 +154,12 @@ def add_reformat_parser(parser):
         '--split_encoder', action='store_true')
     encoder_parser.add_argument(
         '--no_encoder', action='store_true')
+    
+    parser.add_argument(
+        '--sampler_weights', help=' Weights for the sampler. Example of use: --sampler_weights 0.1 0.3 0.5 ...',
+                        nargs='+',
+                        type=int,
+                        default=[])
 
     
     

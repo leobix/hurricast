@@ -108,6 +108,8 @@ def encdec_config():
         ('gru', 128)
     ))
 
+
+
 #Dec.
 @RegisterConfig('transformer_config')
 def transformer_config(): 
@@ -115,7 +117,7 @@ def transformer_config():
         n_in=128+10,
         n_head=2,
         dim_feedforward=2048,
-        num_layers=64,
+        num_layers=6,
         dropout=0.1,
         window_size=None,
         n_out_unroll=None,
@@ -123,6 +125,19 @@ def transformer_config():
         pool_method='default',
         activation='tanh')
 
+@RegisterConfig('transformer_config_noviz')
+def transformer_config_noviz(): 
+    return dict(
+        n_in=10,
+        n_head=2,
+        dim_feedforward=512,
+        num_layers=6,
+        dropout=0.2,
+        window_size=None,
+        n_out_unroll=None,
+        max_len_pe=10,
+        pool_method='default',
+        activation='tanh')
 
 #Dec
 @RegisterConfig('lstm_config')

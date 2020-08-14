@@ -89,7 +89,6 @@ def create_model(mode,
     
     _decoder = "ExpTRANSFORMER" if args.transformer else "ExpLSTM"
     _encoder = None if args.no_encoder else "CNNEncoder"
-    print(MODEL_REGISTRY.keys())
     model = MODEL_REGISTRY[
         'ExperimentalHurricast'](
         n_pred=N_OUT_DECODER,

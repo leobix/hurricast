@@ -1,4 +1,3 @@
-
 import torch
 import numpy as np
 import os
@@ -393,7 +392,8 @@ def create_loaders(mode: str,
                     train_test_split: float, 
                     predict_at: int, 
                     window_size: int, 
-                    debug:bool=False):
+                    debug:bool=False, 
+                    weights=[]):
     """
     #TODO: Write small doc
     """
@@ -424,13 +424,17 @@ def create_loaders(mode: str,
         test_ds = test_ds[:N_DEBUG]
     #Create collate_fn 
     collate_fn = create_collate_fn()
-
+    
+    
+    #if len(weights)==0:
 
     train_loader = DataLoader(train_ds, 
                             batch_size=batch_size, 
                             shuffle=True, 
                             drop_last=True,
                             collate_fn=collate_fn)
+    #else:
+    #    sampler = 
 
     test_loader = DataLoader(test_ds, 
                             batch_size=batch_size, 
