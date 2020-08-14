@@ -277,8 +277,8 @@ def join_forecast(df, pred=24):
     print("The dataframe of storms with forecast has been created.")
     return df_all
 
-def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
-                  max_steps=120, get_displacement=True, forecast=True, one_hot = True):
+def _data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
+                  max_steps=120, get_displacement=True, forecast=True, predict_period = 24, one_hot = True):
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
     # select interesting columns
@@ -291,15 +291,17 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
     df0['wind_category'] = df0.apply(lambda x: sust_wind_to_cat_val(x['WMO_WIND']), axis=1)
     if forecast:
         #join forecast
-        df0 = join_forecast(df0)
+        df0 = join_forecast(df0, predict_period)
         print('df0 columns :', df0.columns)
     if one_hot:
         #adding BASIN and NATURE feature as a one hot
         df0 = add_one_hot(df0, data['BASIN'], 'basin')
-        df0.drop(['BASIN'], axis=1, inplace=True)
         # df0 = add_one_hot(df0, data['NATURE'], 'nature')
         #add category one_hot
         #df0 = add_one_hot(df0, df0['wind_category'], 'category')
+
+    #drop category column
+    df0.drop(['BASIN'], axis=1, inplace=True)
 
     print('df0 columns :', df0.columns)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
