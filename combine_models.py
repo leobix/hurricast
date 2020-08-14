@@ -15,13 +15,14 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 args = setup.create_setup()
 args.window_size = 8
-args.predict_at = 8
+args.predict_at = 16
 args.target_intensity_cat = True
 args.sub_window_size = 8
 #args.sub_area = 1
 args.output_dir = './results/results7_20_12_32_5' #Reached 70.4 and the best results with combination. 7.47 GRU outputs 64. All rest normal.
 #args.output_dir = './results/results7_20_17_12_19' #Be careful to change 2304 for intermediary layer
 #args.output_dir = './results/results7_20_15_4_36' : best for acc 70.5 and nearly best for intensiy 7.50
+#args. = ./results/results8_12_19_5_42 for best perf t+48h
 args.encdec = True
 
 
@@ -236,9 +237,9 @@ print("MAE intensity AN 34 STAT: ", mean_absolute_error(tgt_intensity_test_AN_34
 print("MAE intensity EP 34 STAT: ", mean_absolute_error(tgt_intensity_test_EP_34*std_+mean_, xgb2.predict(X_test_EP_34)*std_+mean_))
 print("MAE intensity WP 34 STAT: ", mean_absolute_error(tgt_intensity_test_WP_34*std_+mean_, xgb2.predict(X_test_WP_34)*std_+mean_))
 
-print("MAE intensity AN 34 STAT: ", mean_absolute_error(tgt_intensity_test_AN_34*std_+mean_, xgb.predict(X_test_AN_34_tot)*std_+mean_))
-print("MAE intensity EP 34 STAT: ", mean_absolute_error(tgt_intensity_test_EP_34*std_+mean_, xgb.predict(X_test_EP_34_tot)*std_+mean_))
-print("MAE intensity WP 34 STAT: ", mean_absolute_error(tgt_intensity_test_WP_34*std_+mean_, xgb.predict(X_test_WP_34_tot)*std_+mean_))
+print("MAE intensity AN 34 TOT: ", mean_absolute_error(tgt_intensity_test_AN_34*std_+mean_, xgb.predict(X_test_AN_34_tot)*std_+mean_))
+print("MAE intensity EP 34 TOT: ", mean_absolute_error(tgt_intensity_test_EP_34*std_+mean_, xgb.predict(X_test_EP_34_tot)*std_+mean_))
+print("MAE intensity WP 34 TOT: ", mean_absolute_error(tgt_intensity_test_WP_34*std_+mean_, xgb.predict(X_test_WP_34_tot)*std_+mean_))
 
 ##### DISPLACEMENT #####
 xgb_x = XGBRegressor(max_depth=7, n_estimators=140, learning_rate = 0.15, subsample = 0.7, min_child_weight = 5)
@@ -284,8 +285,8 @@ LONS_PRED = X_test['LON_7'] + DLONS_PRED
 LATS_TEST = X_test['LAT_7'] + np.array(tgt_displacement_test[:,0])*std_dx+mean_dx
 LONS_TEST = X_test['LON_7'] + np.array(tgt_displacement_test[:,1])*std_dy+mean_dy
 
-print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,0])*std_dx+mean_dx, DLATS_PRED))
-print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,1])*std_dy+mean_dy, DLONS_PRED))
+print("MAE DISPLACEMENT DX DEG: ", mean_absolute_error(np.array(tgt_displacement_test[:,0])*std_dx+mean_dx, DLATS_PRED))
+print("MAE DISPLACEMENT DY DEG: ", mean_absolute_error(np.array(tgt_displacement_test[:,1])*std_dy+mean_dy, DLONS_PRED))
 
 d_km = np.zeros(len(DLONS_PRED))
 for i in range(len(DLONS_PRED)):

@@ -277,7 +277,7 @@ def join_forecast(df, pred=24):
     print("The dataframe of storms with forecast has been created.")
     return df_all
 
-def _data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
+def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
                   max_steps=120, get_displacement=True, forecast=True, predict_period = 24, one_hot = True):
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
