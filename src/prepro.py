@@ -289,15 +289,13 @@ class Prepro:
         train_tensors[0] = (train_tensors[0] - m)/s
         test_tensors[0] = (test_tensors[0] - m)/s
 
-        #THEO: Normalize x_stat
-        print(train_tensors[1])
-        print(train_tensors[1][0])
-        train_tensors[1] = train_tensors[1][:,:10]
-        test_tensors[1] = test_tensors[1][:,:10]
+        #Standardize x_stat
+        train_tensors[1] = train_tensors[1][:,:15]
+        test_tensors[1] = test_tensors[1][:,:15]
         m_xstat = train_tensors[1].mean(axis=(0,1))
-        m_xstat[:10] = 0 #Dont normalize the cat
+        m_xstat[14] = 0 #Dont normalize the cat
         s_xstat = train_tensors[1].std(axis=(0, 1))
-        s_xstat[:10] = 1 #Dont standardize the cat
+        s_xstat[14] = 1 #Dont standardize the cat
         train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
         test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
 
