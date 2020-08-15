@@ -104,7 +104,7 @@ def split_encoder_config():
 def encdec_config():
     return dict(
     #out_cnn + number of stat
-    n_in_decoder=128 + 30,
+    n_in_decoder=128 + 14,
     n_out_decoder=None, 
     hidden_configuration_decoder=(
         ('gru', 128),
@@ -117,7 +117,7 @@ def encdec_config():
 @RegisterConfig('transformer_config')
 def transformer_config(): 
     return dict(
-        n_in=128+30,
+        n_in=128+14,
         n_head=2,
         dim_feedforward=2048,
         num_layers=6,
@@ -146,7 +146,7 @@ def transformer_config_noviz():
 @RegisterConfig('lstm_config')
 def gru_config():
     return dict(
-        n_in=128+30,
+        n_in=128+14,
         hidden_dim=256,
         rnn_num_layers=2,
         N_OUT=128,
