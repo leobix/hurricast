@@ -94,6 +94,7 @@ def split_encoder_config():
         ('conv', 256),
         ('maxpool', None),
         ('flatten', 256 * 4 * 4),
+        ('linear', 576),
         ('linear', 256),
         ('fc', 128)
     ))
