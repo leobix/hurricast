@@ -290,12 +290,12 @@ class Prepro:
         test_tensors[0] = (test_tensors[0] - m)/s
 
         #Standardize x_stat
-        train_tensors[1] = train_tensors[1][:,:15]
-        test_tensors[1] = test_tensors[1][:,:15]
+        train_tensors[1] = train_tensors[1][:,:,:14]
+        test_tensors[1] = test_tensors[1][:,:,:14]
         m_xstat = train_tensors[1].mean(axis=(0,1))
-        m_xstat[14] = 0 #Dont normalize the cat
+        #m_xstat[14] = 0 #Dont normalize the cat
         s_xstat = train_tensors[1].std(axis=(0, 1))
-        s_xstat[14] = 1 #Dont standardize the cat
+        #s_xstat[14] = 1 #Dont standardize the cat
         train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
         test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
 
@@ -312,7 +312,6 @@ class Prepro:
         #THEO: Add the displacement baseline
         train_tensors.insert(4,   tgt_displacement_baseline)
         test_tensors.insert(4,  tgt_test_displacement_baseline)
-        
         #Théo: Add named args
         names = (
             'x_viz', 'x_stat',
