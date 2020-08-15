@@ -198,5 +198,5 @@ def logging_message(epoch, start_time, end_time, train_loss, valid_loss, **kwarg
         val_acc = kwargs['accuracy']
         val_f1micro = kwargs['f1_micro']
         print(
-                    f'\t Val. Accuracy: {valid_loss:.3f} |  Val. Precision: {val_f1micro:.3f}')
+                    f'\t Val. Accuracy: {val_acc:.3f} |  Val. F1 Micro: {val_f1micro:.3f}')
             
