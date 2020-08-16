@@ -299,12 +299,12 @@ class Prepro:
         train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
         test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
 
-        #Normalize velocity target
+        #Standardize velocity target
         m_velocity = train_tensors[-1].mean()
         s_velocity = train_tensors[-1].std()
         train_tensors[-1] = (train_tensors[-1] - m_velocity)/s_velocity
         test_tensors[-1] = (test_tensors[-1] - m_velocity)/s_velocity
-        #Normalize displacement
+        #Standardize displacement
         m_dis = train_tensors[-2].mean(axis=0)
         s_dis = train_tensors[-2].std(axis=0)
         train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
