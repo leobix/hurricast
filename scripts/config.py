@@ -147,8 +147,8 @@ def transformer_config_noviz():
 def gru_config():
     return dict(
         n_in=128+14,
-        hidden_dim=256,
-        rnn_num_layers=2,
+        hidden_dim=128,
+        rnn_num_layers=4,
         N_OUT=128,
         rnn_type='gru',
         dropout=0.1,
