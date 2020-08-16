@@ -114,9 +114,8 @@ def get_filename(pressure, params, time, lat, lon):
     pressure_str = '_'.join(map(str, pressure))
     year, month, day, hour = str(time.year), str(time.month), str(time.day), str(time.hour)
     #TODO Change here in case '../../../Volumes/Untitled/data_era/'
-    return './data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
-
-
+    #return './data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
+    return '../../../Volumes/Untitled/data_era/'+params_str+'/eradata_'+pressure_str+'hPa'+'_'+year+'_'+month+'_'+day+'_'+hour+'_'+'coord'+'_'+str(lat)+'_'+str(lon)+'.nc'
 
 def get_area(lat, lon, grid_size, e = 0.0):
     '''
@@ -151,7 +150,8 @@ def get_data(pressure_level, params, time, lat, lon, grid_size=25, degbypix=1.0,
             'format': 'netcdf'  # Supported format: grib and netcdf. Default: grib
         }, get_filename(pressure_level, params, time, lat, lon))
     else:
-        print("Already downloaded", get_filename(pressure_level, params, time, lat, lon))
+        pass
+        #print("Already downloaded", get_filename(pressure_level, params, time, lat, lon))
 
 
 def download_all2(data, pressure_level = ['900', '700', '500', '225', '100'], params = ['geopotential', 'relative_humidity', 'temperature', 'u_component_of_wind', 'v_component_of_wind'], grid_size = 25, degbypix = 1.0):
@@ -164,7 +164,8 @@ def download_all2(data, pressure_level = ['900', '700', '500', '225', '100'], pa
             try:
                 get_data(pressure_level, params, time, lat, lon, grid_size = grid_size, degbypix = degbypix)
             except:
-                print("False request.")
+                pass
+                #print("False request.")
         i+=1
         print("Storm ", i, " completed.")
     print("Download complete.")
