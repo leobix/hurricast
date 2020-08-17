@@ -294,7 +294,7 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
     """
     output:
         d: dictionary containing information, including SID and ISO_TIME
-        e: tensor of shape [storm * timestep * feature], excluding SID and ISO_TIME 
+        e: tensor of shape [storm * timestep * feature], excluding SID and ISO_TIME
     """
 
     data = pd.read_csv(path)
@@ -307,7 +307,6 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
     df0 = smooth_features(df0)
     # add wind category
     df0['wind_category'] = df0.apply(lambda x: sust_wind_to_cat_val(x['WMO_WIND']), axis=1)
-    df0=df0.iloc[15000:16000]
     if forecast:
         #join forecast
         df0 = join_forecast(df0, predict_period)
