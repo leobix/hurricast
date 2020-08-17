@@ -179,7 +179,7 @@ def eval(model,
         print("\n Accuracy Eval Baseline is: ", accuracy_baseline.item() / len(loop))
 
     else:
-        pri
+        pass
 
     model.train()
     return model, total_loss, total_n_eval
