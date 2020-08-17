@@ -67,6 +67,7 @@ def sust_wind_to_cat_val(wind):
 def add_one_hot(df, df_col, prefix):
     dummies = pd.get_dummies(df_col, prefix=prefix)
     df_out = pd.concat([df, dummies], axis=1)
+    df_out.drop(df_col.name, axis=1, inplace=True)
     print("one-hot added for ", df_col.name)
     return df_out
 
@@ -172,7 +173,7 @@ def add_displacement_distance_km(dict0):
     #input: dictionary of storm data
 def tensor_shape(dict0):
     #number of storms
-    num_storms=len(dict0) - 1
+    num_storms=len(dict0)
     #number of features
     num_features=dict0[next(iter(dict0))].shape[1]
 
@@ -191,10 +192,12 @@ def tensor_shape(dict0):
     return num_storms, num_features, t_max, t_min, t_hist
 
 #create a tensor
-def create_tensor(data, number_of_storms):
-    tensor = data[1]
-    for i in range(2,number_of_storms,1):
-        tensor=np.dstack((tensor, data[i]))
+def create_tensor(data): #data is dictionary form
+    print('creating tensor, dropping SID and ISO_TIME features')
+    tensor = data[1].drop(['SID','ISO_TIME'], axis=1)
+    for i in range(2,len(data)+1,1):
+        data_i = data[i].drop(['SID','ISO_TIME'], axis=1)
+        tensor=np.dstack((tensor, data_i))
     #return list of features
     p_list = data[1].columns.tolist()
     print("The tensor has now been created.")
@@ -214,7 +217,8 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
         storm = hurdat.get_storm((name, year))
         forecast = storm.get_operational_forecasts()
         #choose models
-        model_list = set(['NAM','AP01','HWRF','SHIP', 'AEMI','CLAP5','EMXI','CMC']).intersection(forecast.keys())
+        #"Ideally we are interested in SHIFOR5/SHIPS/GFS/EMXI/HWRF" - Leonard
+        model_list = set(['HWRF','SHIP','SHF5','GFS','EMXI','CLAP5','NAM','AP01','CMC']).intersection(forecast.keys())
         #create empty df
         df_out = pd.DataFrame(columns=['datetime'])
         for model in model_list:
@@ -227,10 +231,10 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
                 temp = temp.add_prefix(str(model)+'_'+str(pred)+'_')
                 temp['datetime'] = pd.to_datetime(time, format = '%Y%m%d%H')
                 df_model = pd.concat([df_model, temp], axis=0)
-            df_out = df_out.merge(df_model, on='datetime', how='outer')
+            if df_model.shape[0]>0:
+                df_out = df_out.merge(df_model, on='datetime', how='outer')
         df_out = df_out.sort_values(by='datetime')
     except:
-        print('no forecast for', name, year)
         df_out = pd.DataFrame(columns=['datetime'])
     return df_out
 
@@ -264,21 +268,35 @@ def join_forecast(df, pred=24):
             #try to get forecast for particular storm
             df_forecast = get_forecast(hurdat, name, year, pred)
             if df_forecast.shape[0]>0:
+                print('timesteps of forecast for ',name, df_forecast.shape[0])
                 #join with dataframe
                 df_forecast['NAME']= name
                 df_joined = df_stat.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])
                 df_joined.drop('datetime', axis=1, inplace=True)
                 df_all = pd.concat([df_all, df_joined], axis=0)
             else:
+                print('no forecast for', name, year)
                 df_all = pd.concat([df_all, df_stat], axis=0)
+    #drop duplicated values
+    df_all.drop_duplicates(subset=['SID','ISO_TIME'], keep='last')
+    #sort values
+    df_all.sort_values(by=['SID','ISO_TIME'], ascending=True)
+    df_all.reset_index(inplace=True, drop=True)
+
     #drop added columns
     df_all.drop(['NAME','YEAR'], inplace=True, axis=1)
-    df_all.reset_index(inplace=True, drop=True)
+
     print("The dataframe of storms with forecast has been created.")
     return df_all
 
-def _data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
+def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
                   max_steps=120, get_displacement=True, forecast=True, predict_period = 24, one_hot = True):
+    """
+    output:
+        d: dictionary containing information, including SID and ISO_TIME
+        e: tensor of shape [storm * timestep * feature], excluding SID and ISO_TIME 
+    """
+
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
     # select interesting columns
@@ -289,10 +307,10 @@ def _data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
     df0 = smooth_features(df0)
     # add wind category
     df0['wind_category'] = df0.apply(lambda x: sust_wind_to_cat_val(x['WMO_WIND']), axis=1)
+    df0=df0.iloc[15000:16000]
     if forecast:
         #join forecast
         df0 = join_forecast(df0, predict_period)
-        print('df0 columns :', df0.columns)
     if one_hot:
         #adding BASIN and NATURE feature as a one hot
         df0 = add_one_hot(df0, data['BASIN'], 'basin')
@@ -300,10 +318,8 @@ def _data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
         #add category one_hot
         #df0 = add_one_hot(df0, df0['wind_category'], 'category')
 
-    #drop category column
-    df0.drop(['BASIN'], axis=1, inplace=True)
-
     print('df0 columns :', df0.columns)
+
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     # pad the trajectories to a fix length
@@ -314,16 +330,17 @@ def _data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
     # print the shape of the tensor
     m, n, t_max, t_min, t_hist = tensor_shape(d)
     # create the tensor
-    t, p_list = create_tensor(d, m)
+    t, p_list = create_tensor(d)
 
     #put t in format storm * timestep * features
     e = t.transpose((2, 0, 1))
-    for tt in e:
-        try:
-            tt[0] = datetime.strptime(tt[0], "%Y-%m-%d %H:%M:%S")
-        except:
-            pass
-    return e[:, :, 1:], d, e
+    # for tt in e:
+    #     try:
+    #         tt[0] = datetime.strptime(tt[0], "%Y-%m-%d %H:%M:%S")
+    #     except:
+    #         pass
+
+    return e, d
 
 
 
