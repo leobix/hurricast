@@ -15,7 +15,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 args = setup.create_setup()
 args.window_size = 8
-args.predict_at = 16
+args.predict_at = 8
 args.target_intensity_cat = True
 args.sub_window_size = 8
 #args.sub_area = 1
