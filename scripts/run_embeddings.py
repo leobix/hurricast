@@ -99,8 +99,8 @@ for i in range(len(means_stat)):
             x_stat_train[:, :, i] = (x_stat_train[:, :, i] - means_stat[i]) / stds_stat[i]
             x_stat_test[:, :, i] = (x_stat_test[:, :, i] - means_stat[i]) / stds_stat[i]
 
-
-
+###### LOADING MODELS AND GETTING EMBEDDINGS
+############################################
 modes = {#Modes and associated tasks
     'intensity': 'regression',
     'displacement': 'regression',
@@ -134,7 +134,10 @@ embeds_train2 = np.array(model.get_embeddings(x_stat_train[30000:55000], x_viz_t
 embeds_train3 = np.array(model.get_embeddings(x_stat_train[55000:80000], x_viz_train[55000:80000]).reshape(-1, 128).detach().numpy())
 embeds_train4 = np.array(model.get_embeddings(x_stat_train[80000:], x_viz_train[80000:]).reshape(-1, 128).detach().numpy())
 X_test_embed = np.array(model.get_embeddings(x_stat_test, x_viz_test).reshape(-1, 128).detach().numpy())
+X_train_embed = np.concatenate((embeds_train1, embeds_train2, embeds_train3, embeds_train4))
 
+##########
+##########
 
 X_train = np.load('../data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
             allow_pickle=True)
@@ -166,9 +169,11 @@ X_train = X_train[cols]
 X_test = X_test[cols]
 
 
-X_train_embed = np.concatenate((embeds_train1, embeds_train2, embeds_train3, embeds_train4))
+X_train_embed = np.load('../data/embeddings/X_train_embeds_1980_34_20_120_results8_16_20_44_28.npy', allow_pickle = True)
+X_test_embed = np.load('../data/embeddings/X_test_embeds_1980_34_20_120_results8_16_20_44_28.npy', allow_pickle = True)
 X_train_total = np.concatenate((X_train, X_train_embed), axis = 1)
 X_test_total = np.concatenate((X_test, X_test_embed), axis = 1)
+
 
 baseline_intensity = x_stat_test[:, x_stat_test.shape[1]-1, 2]
 
@@ -293,9 +298,7 @@ d_km[X_test_WP_34.index].mean()
 
 ####IAI####
 
-from julia import Julia
-Julia(sysimage='../sys.so', compiled_modules = False)
-from interpretableai import iai
+
 
 
 grid = iai.GridSearch(
@@ -370,4 +373,172 @@ d_km.mean()
 d_km[X_test_AN_34.index].mean()
 d_km[X_test_EP_34.index].mean()
 d_km[X_test_WP_34.index].mean()
+
+###### TABULAR INTENSITY REGRESSION ######
+X_train_total = pd.DataFrame(X_train_total)
+X_test_total = pd.DataFrame(X_test_total)
+
+col_names = ["col_" + str(i) for i in range(X_train_total.shape[1])]
+X_train_total.columns = col_names
+X_test_total.columns = col_names
+
+grid = iai.GridSearch(
+    iai.OptimalFeatureSelectionRegressor(
+        random_seed=1,
+    ),
+    sparsity=range(130, 220, 10),
+)
+
+grid.fit(X_train_total, tgt_intensity_train)
+y_hat_intensity = grid.predict(X_test)
+
+numeric_weights, categoric_weights = grid.get_prediction_weights()
+
+X_train_total_sparse = X_train_total[numeric_weights.keys()]
+X_test_total_sparse = X_test_total[numeric_weights.keys()]
+
+xgb2 = XGBRegressor(max_depth=8, n_estimators=140, learning_rate = 0.07, subsample = 0.7, min_child_weight = 5)
+xgb2.fit(X_train_total_sparse, tgt_intensity_train)
+print("MAE intensity: ", mean_absolute_error(np.array(tgt_intensity_test)*std_+mean_, np.array(xgb2.predict(X_test_total_sparse))*std_+mean_))
+
+###### TABULAR CLASSIFICATION ######
+grid = iai.GridSearch(
+    iai.OptimalFeatureSelectionClassifier(
+        random_seed=1,
+    ),
+    sparsity=range(90, 150, 20),
+)
+
+grid.fit(X_train, tgt_intensity_cat_train)
+
+grid.score(X_test, tgt_intensity_cat_test, criterion='misclassification')
+#y_hat_intensity = grid.predict(X_test)
+#print("MAE intensity: ", mean_absolute_error(tgt_intensity_test, y_hat_intensity)*1.852)
+
+numeric_weights, categoric_weights = grid.get_prediction_weights()
+
+X_train_sparse_class = X_train[numeric_weights.keys()]
+X_test_sparse_class = X_test[numeric_weights.keys()]
+
+xgb = XGBClassifier(max_depth=5, n_estimators=140, learning_rate = 0.15, min_child_weight = 2, subsample = 0.9)
+xgb.fit(X_train_sparse_class, tgt_intensity_cat_train)
+print("Accuracy: ", accuracy_score(tgt_intensity_cat_test, xgb.predict(X_test_sparse_class)))
+
+
+
+#### DISPLACEMENT SPARSE TOTAL
+from julia import Julia
+Julia(sysimage='../../sys.so', compiled_modules = False)
+from interpretableai import iai
+
+X_train_total = pd.DataFrame(X_train_total)
+X_test_total = pd.DataFrame(X_test_total)
+
+col_names = ["col_" + str(i) for i in range(X_train_total.shape[1])]
+X_train_total.columns = col_names
+X_test_total.columns = col_names
+
+grid = iai.GridSearch(
+    iai.OptimalFeatureSelectionRegressor(
+        random_seed=1,
+    ),
+    sparsity=range(180, 220, 10),
+)
+
+grid.fit(X_train_total, np.array(tgt_displacement_train[:,0]))
+
+numeric_weights_x, categoric_weights_x = grid.get_prediction_weights()
+
+X_train_total_sparse_x = X_train_total[numeric_weights_x.keys()]
+X_test_total_sparse_x = X_test_total[numeric_weights_x.keys()]
+
+grid.fit(X_train_total, np.array(tgt_displacement_train[:,1]))
+
+numeric_weights_y, categoric_weights_y = grid.get_prediction_weights()
+
+X_train_total_sparse_y = X_train_total[numeric_weights_y.keys()]
+X_test_total_sparse_y = X_test_total[numeric_weights_y.keys()]
+
+xgb_x = XGBRegressor(max_depth=8, n_estimators=100, learning_rate = 0.1, subsample = 0.8, min_child_weight = 5)
+xgb_x.fit(X_train_total_sparse_x, tgt_displacement_train[:,0])
+
+xgb_y = XGBRegressor(max_depth=8, n_estimators=100, learning_rate = 0.1, subsample = 0.8, min_child_weight = 5)
+xgb_y.fit(X_train_total_sparse_y, tgt_displacement_train[:,1])
+DLATS_PRED = np.array(xgb_x.predict(X_test_total_sparse_x))*std_dx+mean_dx
+DLONS_PRED = np.array(xgb_y.predict(X_test_total_sparse_y))*std_dy+mean_dy
+LATS_PRED = X_test['LAT_7'] + DLATS_PRED
+LONS_PRED = X_test['LON_7'] + DLONS_PRED
+LATS_TEST = X_test['LAT_7'] + np.array(tgt_displacement_test[:,0])*std_dx+mean_dx
+LONS_TEST = X_test['LON_7'] + np.array(tgt_displacement_test[:,1])*std_dy+mean_dy
+
+print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,0])*std_dx+mean_dx, DLATS_PRED))
+print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,1])*std_dy+mean_dy, DLONS_PRED))
+
+d_km = np.zeros(len(DLONS_PRED))
+for i in range(len(DLONS_PRED)):
+    d_km[i] = get_distance_km(LONS_PRED[i], LATS_PRED[i], LONS_TEST[i], LATS_TEST[i])
+
+
+#
+d_km.mean()
+d_km[X_test_AN_34.index].mean() #best obtained is 129.56
+d_km[X_test_EP_34.index].mean() #best obtained is 81.48
+d_km[X_test_WP_34.index].mean() #best obtained is 114.18 (113.
+
+
+
+#####
+
+xgb_x = XGBRegressor(max_depth=8, n_estimators=100, learning_rate = 0.07, subsample = 0.8, min_child_weight = 5)
+xgb_x.fit(X_train_total_sparse_x, tgt_displacement_train[:,0])
+
+xgb_y = XGBRegressor(max_depth=8, n_estimators=100, learning_rate = 0.07, subsample = 0.8, min_child_weight = 5)
+xgb_y.fit(X_train_total_sparse_y, tgt_displacement_train[:,1])
+DLATS_PRED = np.array(xgb_x.predict(X_test_total_sparse_x))*std_dx+mean_dx
+DLONS_PRED = np.array(xgb_y.predict(X_test_total_sparse_y))*std_dy+mean_dy
+LATS_PRED = X_test['LAT_7'] + DLATS_PRED
+LONS_PRED = X_test['LON_7'] + DLONS_PRED
+LATS_TEST = X_test['LAT_7'] + np.array(tgt_displacement_test[:,0])*std_dx+mean_dx
+LONS_TEST = X_test['LON_7'] + np.array(tgt_displacement_test[:,1])*std_dy+mean_dy
+
+print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,0])*std_dx+mean_dx, DLATS_PRED))
+print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,1])*std_dy+mean_dy, DLONS_PRED))
+
+d_km = np.zeros(len(DLONS_PRED))
+for i in range(len(DLONS_PRED)):
+    d_km[i] = get_distance_km(LONS_PRED[i], LATS_PRED[i], LONS_TEST[i], LATS_TEST[i])
+
+
+#
+d_km.mean()
+d_km[X_test_AN_34.index].mean() #best obtained is 129.14
+d_km[X_test_EP_34.index].mean() #best obtained is 81.48
+d_km[X_test_WP_34.index].mean() #best obtained is 114.18 (113.
+
+
+xgb_x = XGBRegressor(max_depth=8, n_estimators=100, learning_rate = 0.07, subsample = 0.95, min_child_weight = 5)
+xgb_x.fit(X_train_total_sparse_x, tgt_displacement_train[:,0])
+
+xgb_y = XGBRegressor(max_depth=8, n_estimators=100, learning_rate = 0.07, subsample = 0.95, min_child_weight = 5)
+xgb_y.fit(X_train_total_sparse_y, tgt_displacement_train[:,1])
+DLATS_PRED = np.array(xgb_x.predict(X_test_total_sparse_x))*std_dx+mean_dx
+DLONS_PRED = np.array(xgb_y.predict(X_test_total_sparse_y))*std_dy+mean_dy
+LATS_PRED = X_test['LAT_7'] + DLATS_PRED
+LONS_PRED = X_test['LON_7'] + DLONS_PRED
+LATS_TEST = X_test['LAT_7'] + np.array(tgt_displacement_test[:,0])*std_dx+mean_dx
+LONS_TEST = X_test['LON_7'] + np.array(tgt_displacement_test[:,1])*std_dy+mean_dy
+
+print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,0])*std_dx+mean_dx, DLATS_PRED))
+print("MAE intensity: ", mean_absolute_error(np.array(tgt_displacement_test[:,1])*std_dy+mean_dy, DLONS_PRED))
+
+d_km = np.zeros(len(DLONS_PRED))
+for i in range(len(DLONS_PRED)):
+    d_km[i] = get_distance_km(LONS_PRED[i], LATS_PRED[i], LONS_TEST[i], LATS_TEST[i])
+
+
+#
+d_km.mean()
+d_km[X_test_AN_34.index].mean() #best obtained is 129.14
+d_km[X_test_EP_34.index].mean() #best obtained is 81.48
+d_km[X_test_WP_34.index].mean() #best obtained is 114.18 (113.
 
