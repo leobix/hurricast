@@ -318,7 +318,6 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
         #df0 = add_one_hot(df0, df0['wind_category'], 'category')
 
     print('df0 columns :', df0.columns)
-
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     # pad the trajectories to a fix length

@@ -94,7 +94,7 @@ grid = iai.GridSearch(
     iai.OptimalFeatureSelectionRegressor(
         random_seed=1,
     ),
-    sparsity=range(110, 130, 3),
+    sparsity=range(110, 130, 10),
 )
 
 grid.fit(X_train, tgt_intensity_train)
@@ -107,9 +107,7 @@ X_train_sparse = X_train[numeric_weights.keys()]
 X_test_sparse = X_test[numeric_weights.keys()]
 
 
-xgb = XGBRegressor(max_depth=5, n_estimators=140, learning_rate = 0.15, min_child_weight = 2, subsample = 0.8)
-xgb.fit(X_train_sparse, tgt_intensity_train)
-print("MAE intensity: ", mean_absolute_error(tgt_intensity_test, xgb.predict(X_test_sparse))*1.852)
+
 
 xgb = XGBClassifier(max_depth=5, n_estimators=140, learning_rate = 0.15, min_child_weight = 2, subsample = 0.9)
 xgb.fit(X_train_sparse, tgt_intensity_cat_train)
