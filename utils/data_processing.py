@@ -278,9 +278,9 @@ def join_forecast(df, pred=24):
                 print('no forecast for', name, year)
                 df_all = pd.concat([df_all, df_stat], axis=0)
     #drop duplicated values
-    df_all.drop_duplicates(subset=['SID','ISO_TIME'], keep='last')
+    df_all.drop_duplicates(subset=['SID','ISO_TIME'], keep='last', inplace=True)
     #sort values
-    df_all.sort_values(by=['SID','ISO_TIME'], ascending=True)
+    df_all.sort_values(by=['SID','ISO_TIME'], ascending=True, inplace=True)
     df_all.reset_index(inplace=True, drop=True)
 
     #drop added columns
