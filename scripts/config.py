@@ -77,6 +77,7 @@ def full_encoder_config():
         ('conv', 256),
         ('maxpool', None),
         ('flatten', 256 * 4 * 4),
+        ('linear', 576),
         ('linear', 256),
         ('fc', 128)
     ))
@@ -93,6 +94,7 @@ def split_encoder_config():
         ('conv', 256),
         ('maxpool', None),
         ('flatten', 256 * 4 * 4),
+        ('linear', 576),
         ('linear', 256),
         ('fc', 128)
     ))
@@ -102,7 +104,7 @@ def split_encoder_config():
 def encdec_config():
     return dict(
     #out_cnn + number of stat
-    n_in_decoder=128 + 10, 
+    n_in_decoder=128 + 14,
     n_out_decoder=None, 
     hidden_configuration_decoder=(
         ('gru', 128),
@@ -115,7 +117,7 @@ def encdec_config():
 @RegisterConfig('transformer_config')
 def transformer_config(): 
     return dict(
-        n_in=128+10,
+        n_in=128+14,
         n_head=2,
         dim_feedforward=2048,
         num_layers=6,
@@ -144,9 +146,9 @@ def transformer_config_noviz():
 @RegisterConfig('lstm_config')
 def gru_config():
     return dict(
-        n_in=128+10,
-        hidden_dim=256,
-        rnn_num_layers=2,
+        n_in=128+14,
+        hidden_dim=128,
+        rnn_num_layers=4,
         N_OUT=128,
         rnn_type='gru',
         dropout=0.1,

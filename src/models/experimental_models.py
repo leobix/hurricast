@@ -381,6 +381,21 @@ class ExperimentalHurricast(nn.Module):
 
         return self.predictor(fused_x)
 
+    def get_embeddings(self, x_stat, x_viz):
+        """
+        Forward pass to get the embeddings.
+        """
+
+        if x_viz is None or self.encoder is None:  # no CNN
+            fused_x = x_stat
+        elif self.no_stat or x_stat is None:  # No stat
+            fused_x = self.encode(x_viz)
+        else:  # Everything
+            fused_x = self.encode(x_viz)
+            fused_x = self.fusion(x_stat, fused_x)
+
+        return self.decode(fused_x)
+
 
 @RegisterModel('ExpTRANSFORMER')
 class ExpTRANSFORMER(nn.Module):

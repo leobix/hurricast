@@ -188,8 +188,9 @@ def create_seeds(torch_seed=0, np_seed=2020):
 
 
 def create_device(gpu_nb):
-    device = torch.device(
-        f'cuda:{gpu_nb}' if torch.cuda.is_available() and gpu_nb != -1 else 'cpu')
+    #device = torch.device(
+        #f'cuda:{gpu_nb}' if torch.cuda.is_available() and gpu_nb != -1 else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(' Prepare the training using ', device)
     return device
 
@@ -213,10 +214,11 @@ def create_setup():
     if osp.exists(args.output_dir):
         import datetime
         now = datetime.datetime.now()
-        now_ = '{}_{}_{}_{}'.format(now.month,
+        now_ = '{}_{}_{}_{}_{}'.format(now.month,
                                     now.day,
                                     now.hour,
-                                    now.minute)
+                                    now.minute,
+                                    now.second)
 
         args.output_dir = '../results/results'+now_
     else:

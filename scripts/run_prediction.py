@@ -597,7 +597,7 @@ def main(args):
             # if target intensity then 1 value to predict
             n_out_decoder = 2 - args.target_intensity
         # n_in decoder must be out encoder + 9 because we add side features!
-        model = models.ENCDEC(n_in_decoder=128+10,
+        model = models.ENCDEC(n_in_decoder=128+30,
                                 n_out_decoder=n_out_decoder,
                                 encoder=encoder,
                                 hidden_configuration_decoder=decoder_config,
@@ -614,7 +614,7 @@ def main(args):
             n_out_decoder = 2 - args.target_intensity
         # n_in decoder must be out encoder + 9 because we add side features!
         model = models.TRANSFORMER(encoder,
-                                   n_in_decoder=128+10,
+                                   n_in_decoder=128+30,
                                    n_out_transformer=128,
                                    n_out_decoder=n_out_decoder,
                                    hidden_configuration_decoder=decoder_config,

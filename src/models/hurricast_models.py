@@ -373,7 +373,7 @@ if __name__ == "__main__":
         
 
         transfo_config = dict(
-            n_in_decoder=128 + 10,
+            n_in_decoder=128 + 30,
             n_out_decoder=7,
             n_out_transformer=128,
             hidden_configuration_decoder={

@@ -194,9 +194,11 @@ def logging_message(epoch, start_time, end_time, train_loss, valid_loss, **kwarg
     print(
                 f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
     if 'accuracy' in kwargs:
-                    
-        val_acc = kwargs['accuracy']
-        val_precision = kwargs['precision']
-        print(
-                    f'\t Val. Accuracy: {valid_loss:.3f} |  Val. Precision: {val_precision:.3f}')
+        try:
+            val_acc = kwargs['accuracy']
+            val_f1micro = kwargs['f1_micro']
+            print(
+                    f'\t Val. Accuracy: {val_acc:.3f} |  Val. F1 Micro: {val_f1micro:.3f}')
+        except:
+            pass
             

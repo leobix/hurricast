@@ -129,21 +129,22 @@ class Prepro:
                                                  target_intensity_cat_baseline))  # Flatten everything
 
         #Resize X_vision
+        #TODO Be careful, everytime the format of y changes, change index
         X_vision = X_vision.flatten(start_dim=2, end_dim=3)
 
         tgt_displacement = torch.index_select(target_displacement,
                                               dim=-1,
-                                              index=torch.tensor([4,
-                                                                  5]))
+                                              index=torch.tensor([target_displacement.size(-1)-2,
+                                                                     target_displacement.size(-1)-1]))
         tgt_intensity = torch.select(target_intensity,
                                      dim=-1,
                                      index=2)
         tgt_intensity_cat = torch.select(target_intensity,
                                          dim=-1,
-                                         index=-3).type(torch.LongTensor)
+                                         index=14).type(torch.LongTensor)
         tgt_intensity_cat_baseline = torch.select(target_intensity_cat_baseline,
                                                   dim=-1,
-                                                  index=-3).type(torch.LongTensor)
+                                                  index=14).type(torch.LongTensor)
 
         train_data = dict(X_vision=X_vision.float(),
                           X_stat=X_stat.float(),
@@ -288,20 +289,22 @@ class Prepro:
         train_tensors[0] = (train_tensors[0] - m)/s
         test_tensors[0] = (test_tensors[0] - m)/s
 
-        #THEO: Normalize x_stat
-        #m_xstat = train_tensors[1].mean(axis=(0,1))
-        #m_xstat[7] = 0 #Dont normalize the cat
-        #s_xstat = train_tensors[1].std(axis=(0, 1))
-        #s_xstat[7] = 1 #Dont standradize the cat
-        #train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
-        #test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
+        #Standardize x_stat
+        train_tensors[1] = train_tensors[1][:,:,:14]
+        test_tensors[1] = test_tensors[1][:,:,:14]
+        m_xstat = train_tensors[1].mean(axis=(0,1))
+        #m_xstat[14] = 0 #Dont normalize the cat
+        s_xstat = train_tensors[1].std(axis=(0, 1))
+        #s_xstat[14] = 1 #Dont standardize the cat
+        train_tensors[1] = (train_tensors[1] - m_xstat)/s_xstat
+        test_tensors[1] = (test_tensors[1] - m_xstat)/s_xstat
 
-        #Normalize velocity target
+        #Standardize velocity target
         m_velocity = train_tensors[-1].mean()
         s_velocity = train_tensors[-1].std()
         train_tensors[-1] = (train_tensors[-1] - m_velocity)/s_velocity
         test_tensors[-1] = (test_tensors[-1] - m_velocity)/s_velocity
-        #Normalize displacement
+        #Standardize displacement
         m_dis = train_tensors[-2].mean(axis=0)
         s_dis = train_tensors[-2].std(axis=0)
         train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
@@ -309,7 +312,6 @@ class Prepro:
         #THEO: Add the displacement baseline
         train_tensors.insert(4,   tgt_displacement_baseline)
         test_tensors.insert(4,  tgt_test_displacement_baseline)
-        
         #Théo: Add named args
         names = (
             'x_viz', 'x_stat',
