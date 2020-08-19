@@ -447,6 +447,7 @@ def create_loaders(mode: str,
     #TODO: Write small doc
     """
     if not load_tensors:
+        print('NOT LOADING TENSORS - CREATING FROM SCRATCH')
     #Load numpyy arrays form disk
         vision_data = np.load(osp.join(data_dir, vision_name),
                               allow_pickle=True)
