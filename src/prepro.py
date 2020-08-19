@@ -385,6 +385,7 @@ def create_collate_fn(keys_model: list=['x_viz', 'x_stat'],
     
     return lambda batch:  _collate_fn(batch, keys_model, keys_loss)
 
+
 def save_tensors(tensors: dict, 
                 data_dir: str, 
                 prefix: str='train'):
@@ -440,8 +441,8 @@ def create_loaders(mode: str,
                     predict_at: int, 
                     window_size: int, 
                     debug:bool=False, 
-                    save_tensors:bool=False, 
-                    load_tensors:bool=True,
+                    save_tensors: bool=False, 
+                    load_tensors: bool=True,
                     weights=[]):
     """
     #TODO: Write small doc
