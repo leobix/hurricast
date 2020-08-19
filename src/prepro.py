@@ -33,7 +33,7 @@ accepted_modes = {k: (v, 'x_viz', 'x_stat'
 def CheckMode(func):
     def decorator(*fargs, **fkwargs):
         if 'mode' not in fkwargs:
-            raise KeyError("Please provide the mode as a named argument,")
+            raise KeyError("Please provide the mode as a named argument.")
 
         mode = fkwargs.get('mode')
         assert mode in accepted_modes.keys(), "\

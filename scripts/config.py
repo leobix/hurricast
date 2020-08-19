@@ -84,7 +84,7 @@ def encdec_config():
 @RegisterConfig('transformer_config')
 def transformer_config(): 
     return dict(
-        n_in=128+14,
+        n_in=128 + 14,
         n_head=2,
         dim_feedforward=2048,
         num_layers=6,
@@ -113,7 +113,7 @@ def transformer_config_noviz():
 @RegisterConfig('lstm_config')
 def gru_config():
     return dict(
-        n_in=128+14,
+        n_in=128 + 14,
         hidden_dim=128,
         rnn_num_layers=4,
         N_OUT=128,
