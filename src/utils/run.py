@@ -73,7 +73,8 @@ def _write_metrics(writer, metrics_dict, global_step, mode):
                           item,
                           global_step)
         except Exception as e:
-            print('Could not write {} due to {}'.format(name, e))
+            #print('Could not write {} due to {}'.format(name, e))
+            pass
 
 
 def _write_list(writer, loss_list, global_step, name):
@@ -183,22 +184,27 @@ def update_all_stats(
             pass
     return all_stats
 
+
 def logging_message(epoch, start_time, end_time, train_loss, valid_loss, **kwargs):
             
     epoch_mins, epoch_secs = elapsed_time(start_time, end_time)
             
     print(
                 f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
+    
     print(
                 f'\tTrain Loss: {train_loss:.4f} | Train PPL: {math.exp(train_loss):7.3f}')
+    
     print(
                 f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
-    if 'accuracy' in kwargs:
+    
+    if 'f1_micro' in kwargs and 'f1_macro' in kwargs:
         try:
             val_acc = kwargs['accuracy']
             val_f1micro = kwargs['f1_micro']
+            val_f1macro = kwargs['f1_macro']
             print(
-                    f'\t Val. Accuracy: {val_acc:.3f} |  Val. F1 Micro: {val_f1micro:.3f}')
+                    f'\t Val. F1 Macro: {val_f1macro:.3f} |  Val. F1 Micro: {val_f1micro:.3f}')
         except:
             pass
             
