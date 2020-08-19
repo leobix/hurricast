@@ -101,7 +101,9 @@ def write_hparams(writer, args, metric_dict, hparam_dict=None):
         "batch_size",
         "lr", 
         "mode", 
-        "n_epochs"]
+        "n_epochs", 
+        "encoder_config", 
+        "decoder_config"]
 
     if hparam_dict is None:
         hparam_dict = {}
@@ -110,7 +112,8 @@ def write_hparams(writer, args, metric_dict, hparam_dict=None):
                 hparam_dict[param] = getattr(args, param)
                 #print(param, type(hparam_dict[param]), hparam_dict[param])
             except Exception as e:
-                print('Problem', e)
+                print(
+                    'Problem saving the final hyper-parameters due to ', e)
                 hparam_dict[param] = 'error saving'
     writer.add_hparams(hparam_dict, metric_dict)
 

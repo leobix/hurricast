@@ -29,39 +29,6 @@ def create_config(config_name: str)-> dict:
     assert isinstance(_config, dict)
     return _config
 
-"""
-@dataclass
-class EncoderConfig:
-    n_in: int
-    n_out: int
-    hidden_configuration: Tuple[str, int]
-
-@dataclass
-class DecoderConfig:
-    n_in_decoder: int
-    hidden_configuration_decoder: Tuple[str, int]
-    n_out_decoder: Any = None  # Need to defined later 
-                                #(depends on the task)
-    window_size:  Any = None
-
-@dataclass
-class TransformerConfig:
-    n_in_decoder: int
-    hidden_configuration_decoder: Dict[str, int]
-    n_out_transformer: int
-    n_out_decoder: Any=None #Need to defined later
-                            #(depends on the task)
-    window_size: Any=None
-
-@dataclass
-class LINEARTransformConfig:
-    target_intensity: Any = None
-    target_intensity_cat: Any=None
-    window_size: Any = None
-    n_out_decoder: Any=None #Need to defined later
-                            #(depends on the task)
-"""
-
 #=========================
 # All our configs
 #Enc.
