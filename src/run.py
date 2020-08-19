@@ -46,6 +46,15 @@ def evaluate(model,
     out_metrics = metrics_func(preds=preds, target=true_preds)
     out_loss = loss_fn(preds, true_preds)
     return preds, true_preds, out_loss, out_metrics    
+
+#TODO:Write it down
+def evaluate_naive_baseline(
+                            iterator,
+                            task,
+                            loss_fn,
+                            metrics_func):
+    return None
+    
 #================================
 #Train
 
