@@ -29,39 +29,6 @@ def create_config(config_name: str)-> dict:
     assert isinstance(_config, dict)
     return _config
 
-"""
-@dataclass
-class EncoderConfig:
-    n_in: int
-    n_out: int
-    hidden_configuration: Tuple[str, int]
-
-@dataclass
-class DecoderConfig:
-    n_in_decoder: int
-    hidden_configuration_decoder: Tuple[str, int]
-    n_out_decoder: Any = None  # Need to defined later 
-                                #(depends on the task)
-    window_size:  Any = None
-
-@dataclass
-class TransformerConfig:
-    n_in_decoder: int
-    hidden_configuration_decoder: Dict[str, int]
-    n_out_transformer: int
-    n_out_decoder: Any=None #Need to defined later
-                            #(depends on the task)
-    window_size: Any=None
-
-@dataclass
-class LINEARTransformConfig:
-    target_intensity: Any = None
-    target_intensity_cat: Any=None
-    window_size: Any = None
-    n_out_decoder: Any=None #Need to defined later
-                            #(depends on the task)
-"""
-
 #=========================
 # All our configs
 #Enc.
@@ -117,7 +84,7 @@ def encdec_config():
 @RegisterConfig('transformer_config')
 def transformer_config(): 
     return dict(
-        n_in=128+14,
+        n_in=128 + 14,
         n_head=2,
         dim_feedforward=256,
         num_layers=2,
@@ -146,7 +113,7 @@ def transformer_config_noviz():
 @RegisterConfig('lstm_config')
 def gru_config():
     return dict(
-        n_in=128+14,
+        n_in=128 + 14,
         hidden_dim=128,
         rnn_num_layers=4,
         N_OUT=128,

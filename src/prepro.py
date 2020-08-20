@@ -33,7 +33,7 @@ accepted_modes = {k: (v, 'x_viz', 'x_stat'
 def CheckMode(func):
     def decorator(*fargs, **fkwargs):
         if 'mode' not in fkwargs:
-            raise KeyError("Please provide the mode as a named argument,")
+            raise KeyError("Please provide the mode as a named argument.")
 
         mode = fkwargs.get('mode')
         assert mode in accepted_modes.keys(), "\
@@ -327,6 +327,7 @@ class Prepro:
         named_test_tensors = {
             name: tensor for name, tensor in zip(
                 names, test_tensors)}
+                
         
         return named_train_tensors, named_test_tensors
 
@@ -385,6 +386,51 @@ def create_collate_fn(keys_model: list=['x_viz', 'x_stat'],
     return lambda batch:  _collate_fn(batch, keys_model, keys_loss)
 
 
+def save_tensors(tensors: dict, 
+                data_dir: str, 
+                prefix: str='train'):
+    """
+    Save the different tensors in tensors in the data_dir. 
+    The prefix will be prepended to the tensor name.
+    Save under numpy format.
+
+    tensors: Dict[str, torch.Tensor] - Tensors to be saved
+    data_dir: str - Path of the data
+    prefix: str - The tensors will be saved under the format 
+        data_dir/{prefix}_{dict_key}.npy
+    """
+    for k, v in tensors.items():
+        file = osp.join(data_dir, prefix + '_' + k +'.npy')
+        assert isinstance(v, torch.Tensor)
+        arr = v.numpy()
+        with open(file, 'wb') as f:
+            np.save(f, arr)
+        
+
+def load_tensors(data_dir: str, 
+                prefix: str='train'):
+    """
+    Load the different tensors in the data_dir (whose names start with prefix)
+    The prefix will be prepended to the tensor name.
+    Save under numpy format.
+
+    tensors: Dict[str, torch.Tensor] - Tensors to be saved
+    data_dir: str - Path of the data
+    prefix: str - The tensors will be saved under the format 
+        data_dir/{prefix}_{dict_key}.npy
+    """
+    tensors = {}
+    
+    files = tuple(
+        filter(lambda x : x.startswith(prefix), os.listdir(data_dir)))
+    
+    for file in files:
+        arr = np.load(
+            osp.join(data_dir, file), allow_pickle=True)
+        tensors[file] = torch.from_numpy(arr)
+    return tensors
+    
+
 @CheckMode        
 def create_loaders(mode: str,
                     data_dir: str, 
@@ -395,23 +441,38 @@ def create_loaders(mode: str,
                     predict_at: int, 
                     window_size: int, 
                     debug:bool=False, 
+                    save_tensors: bool=False, 
+                    load_tensors: bool=True,
                     weights=[]):
     """
     #TODO: Write small doc
     """
+    if not load_tensors:
     #Load numpyy arrays form disk
-    vision_data = np.load(osp.join(data_dir, vision_name),
-                          allow_pickle=True)
-    y = np.load(osp.join(data_dir, y_name),
-                allow_pickle=True)
+        vision_data = np.load(osp.join(data_dir, vision_name),
+                              allow_pickle=True)
+        y = np.load(osp.join(data_dir, y_name),
+                    allow_pickle=True)
     
-    #Create named tensors
-    train_tensors, test_tensors = Prepro.process(
-        y=y, 
-        vision_data=vision_data,
-        train_split=train_test_split,
-        predict_at=predict_at,
-        window_size=window_size)
+        #Create named tensors
+        train_tensors, test_tensors = Prepro.process(
+            y=y, 
+            vision_data=vision_data,
+            train_split=train_test_split,
+            predict_at=predict_at,
+            window_size=window_size)
+        if save_tensors:
+            save_tensors(train_tensors,
+                         data_dir,
+                         prefix='tens_train')
+            save_tensors(test_tensors,
+                         data_dir,
+                         prefix='tens_test')
+
+    else: #Load train_tensors
+        train_tensors = load_tensors(data_dir, prefix='tens_train')
+        test_tensors = load_tensors(data_dir, prefix='tens_test')
+
 
     #Filter the relevant keys
     train_tensors, test_tensors = filter_keys(
@@ -426,8 +487,7 @@ def create_loaders(mode: str,
         test_ds = test_ds[:N_DEBUG]
     #Create collate_fn 
     collate_fn = create_collate_fn()
-    
-    
+        
     #if len(weights)==0:
 
     train_loader = DataLoader(train_ds, 
@@ -435,15 +495,17 @@ def create_loaders(mode: str,
                             shuffle=True, 
                             drop_last=True,
                             collate_fn=collate_fn)
-    #else:
-    #    sampler = 
 
     test_loader = DataLoader(test_ds, 
                             batch_size=batch_size, 
                             shuffle=False, 
                             collate_fn=collate_fn)
-    
+    #TODO: Add Weighted Sampler
+    if len(weights) > 0: 
+        pass
     return train_loader, test_loader
+
+
 
 
 if __name__ == "__main__":

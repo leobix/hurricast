@@ -46,6 +46,14 @@ def evaluate(model,
     out_metrics = metrics_func(preds=preds, target=true_preds)
     out_loss = loss_fn(preds, true_preds)
     return preds, true_preds, out_loss, out_metrics    
+
+#TODO:Write it down
+def evaluate_naive_baseline(iterator,
+                            task,
+                            loss_fn,
+                            metrics_func):
+    return None
+    
 #================================
 #Train
 
@@ -130,21 +138,20 @@ def train(model,
           writer=None):
     #======================
     #Begin train
-    #stats = _create_stats()
+    #Create the dictionaries that we will need to store the metrics.
     all_train_stats = {} 
-    all_eval_stats = {}
-    if task=='classification':
-        best_valid_loss = -1.
-    else: #regression
-        best_valid_loss = float('inf')
+    all_eval_stats = {} 
+    best_valid_loss = -1. if task == 'classification' \
+        else float('inf')
     if get_training_stats: get_training_stats = task
+    
+    #Start looping
     model.train()
-    #Train
-
     loop = tqdm.trange(num_epochs, desc='Epochs')
     start_time = time.time()
     for epoch in loop:
         
+        # Train
         model, optimizer, train_loss,\
         train_losses, preds, true_preds=train_epoch(
                                     model=model,
@@ -157,13 +164,15 @@ def train(model,
                                     l2_reg=l2_reg,
                                     clip=clip,
                                     scheduler=scheduler)
-        
-        
+        # Get metrics and update the main dict.
         train_metrics = metrics_fn(preds, true_preds)
         all_train_stats = urun.update_all_stats(
-                    all_train_stats, {'train_loss':train_loss,'train_losses':train_losses, **train_metrics})
+                    all_train_stats, 
+                    {'train_loss': train_loss,
+                    'train_losses': train_losses, 
+                    **train_metrics})
         
-        #Eval: 
+        # Eval (Metrics already computed)
         preds, true_preds, \
         valid_loss, eval_metrics = evaluate(
                                     model=model, 
@@ -171,23 +180,19 @@ def train(model,
                                     loss_fn=test_loss_fn,
                                     metrics_func=metrics_fn,
                                     task=task)
+        # Update the main dict.
         all_eval_stats = urun.update_all_stats(
                    all_eval_stats , {'valid_loss': valid_loss, **eval_metrics})
 
         end_time = time.time()
         
         
-        if ((task=='classification') and (valid_loss > best_valid_loss)) or ((task=='regression') and (valid_loss < best_valid_loss)):
+        if ((task=='classification') and (valid_loss > best_valid_loss)) or (
+            (task=='regression') and (valid_loss < best_valid_loss)): #Best metric achieved
             print('New Best model found: Epoch {} - Loss {}'.format(epoch, valid_loss))
             best_valid_loss = valid_loss
             best_model = copy.deepcopy(model)
-            if save:
-                torch.save(best_model.state_dict(), output_dir +
-                           '/model-best.pt')
         
-        #UPDATE 
-        #all_train_metrics.append(train_metrics)
-        #all_eval_metrics.append(eval_metrics)
         #Logging
         urun.logging_message(epoch, start_time, end_time, train_loss, valid_loss, **eval_metrics)
 
@@ -203,9 +208,7 @@ def train(model,
                     labels=true_preds, preds=preds,
                     N_train=len(train_iterator),
                     N_eval=len(val_iterator),
-                    mode=mode)
-
-          
+                    mode=mode)          
         
         loop.set_description('Epoch {} | Loss {}'.format(epoch,
                                                          valid_loss))
@@ -221,6 +224,10 @@ def train(model,
                 metrics_func=metrics_fn)
     print(
         f'\t Final test ACC {test_loss:.3f}')
+
+    if save:
+        torch.save(best_model.state_dict(), output_dir +
+                '/model-best.pt')
 
     #Add Final metrics to Board --> Hparams
     if writer is not None:
