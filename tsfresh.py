@@ -2,19 +2,33 @@
 
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from tsfresh import extract_features
 from tsfresh import extract_relevant_features
 
-window_size = 16
+window_size = 8
+predict_at = 8
 
-X_train = np.load('data/X_train_stat_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle = True)
-X_test = np.load('data/X_test_stat_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle = True)
+X_train = np.load('data/X_train_stat_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy', allow_pickle = True)[:,:14]
+X_test = np.load('data/X_test_stat_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy', allow_pickle = True)[:,:14]
 
-tgt_intensity_train = np.load('data/y_train_intensity_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle=True)
-tgt_intensity_test = np.load('data/y_test_intensity_1980_50_20_90_w' + str(window_size) + '.npy', allow_pickle=True)
+tgt_intensity_train = np.load('data/y_train_intensity_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',
+            allow_pickle=True)
+tgt_intensity_test = np.load('data/y_test_intensity_1980_34_20_120_w' + str(window_size) + '_at_' + str(predict_at) + '.npy',
+            allow_pickle=True)
+
+mean_intensity = tgt_intensity_train.mean()
+std_intensity = tgt_intensity_train.std()
+tgt_intensity_train = (tgt_intensity_train - mean_intensity)/std_intensity
+tgt_intensity_test = (tgt_intensity_test - mean_intensity)/std_intensity
+
+means_stat = X_train.mean(dim=(0, 1))
+stds_stat = X_train.std(dim=(0, 1))
+
+for i in range(len(means_stat)):
+    X_train[:, :, i] = (X_train[:, :, i] - means_stat[i]) / stds_stat[i]
+    X_test[:, :, i] = (X_test[:, :, i] - means_stat[i]) / stds_stat[i]
 
 def prepare_fresh(X):
     data = X.reshape(X.shape[0], window_size, X.shape[1]//window_size)
@@ -32,17 +46,15 @@ def prepare_fresh(X):
         new_data = new_data.rename(columns={i:"feat_"+str(i-1)})
     return new_data
 
-names = ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
-         'STORM_SPEED', 'STORM_DIR', 'storm_category', 'cat_basin_EP', 'cat_basin_NI',
-'cat_basin_SI', 'cat_basin_SP', 'cat_basin_WP', 'cat_nature_DS', 'cat_nature_ET',
-'cat_nature_MX', 'cat_nature_NR', 'cat_nature_SS', 'cat_nature_TS',
-'cat_UNKNOWN', 
-'STORM_DISPLACEMENT_X', 'STORM_DISPLACEMENT_Y']
+names = ['WMO_WIND', 'WMO_PRES', 'DIST2LAND',
+         'STORM_SPEED', 'cat_cos_day', 'cat_sign_day', 'COS_STORM_DIR', 'SIN_STORM_DIR',
+         'COS_LAT', 'SIN_LAT', 'COS_LON', 'SIN_LON',
+         'STORM_DISPLACEMENT_X', 'STORM_DISPLACEMENT_Y']
 
 names_all = names * window_size
 
 for i in range(len(names_all)):
-    names_all[i] += '_' + str(i//22)
+    names_all[i] += '_' + str(i//14)
 
     
 X_train = pd.DataFrame(X_train)

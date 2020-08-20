@@ -28,6 +28,18 @@ def process_netcdf(filepath, param):
     return grid
 
 
+def create_tensor_for_extraction(data): #data is dictionary form
+    print('creating tensor, dropping SID and ISO_TIME features')
+    tensor = data[1].drop(['SID'], axis=1)
+    for i in range(2,len(data)+1,1):
+        data_i = data[i].drop(['SID'], axis=1)
+        tensor=np.dstack((tensor, data_i))
+    #return list of features
+    p_list = data[1].columns.tolist()
+    print("The tensor has now been created.")
+    return tensor, p_list
+
+
 def prepare_data2(path="./data/last3years.csv", min_wind=34, min_steps=20, max_steps=120):
     data = pd.read_csv(path)
     # select interesting columns
@@ -41,8 +53,8 @@ def prepare_data2(path="./data/last3years.csv", min_wind=34, min_steps=20, max_s
     # print the shape of the tensor
     m, n, t_max, t_min, t_hist = tensor_shape(d)
     # create the tensor
-    t, p_list = create_tensor(d, m)
-    return t[:, 2:5, :]
+    t, p_list = create_tensor_for_extraction(d)
+    return t[:, 1:4, :]
 
 
 def get_storms(extraction = False, min_wind = 30, min_steps= 20, max_steps=60, path = "since1980.csv"):
