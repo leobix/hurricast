@@ -119,7 +119,8 @@ def add_data_parser(parser):
             In that case, the tensors must be named under the convention \
             train_tensor_KEY.npy. If False, the tensors will be created." )
     
-    parser.add_argument('--save_tensors', 
+    parser.add_argument(
+        '--save_tensors', 
         action='store_true', 
         help="Whether to save the newly create directly.\
             In that case, the tensors will be saved under\

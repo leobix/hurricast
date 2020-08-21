@@ -310,8 +310,8 @@ class Prepro:
         train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
         test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
         #THEO: Add the displacement baseline
-        train_tensors.insert(4,   tgt_displacement_baseline)
-        test_tensors.insert(4,  tgt_test_displacement_baseline)
+        train_tensors.insert(4, tgt_displacement_baseline)
+        test_tensors.insert(4, tgt_test_displacement_baseline)
         #Théo: Add named args
         names = (
             'x_viz', 'x_stat',
@@ -400,6 +400,7 @@ def save_tensors(tensors: dict,
         data_dir/{prefix}_{dict_key}.npy
     """
     for k, v in tensors.items():
+        print('Saving - ', k)
         file = osp.join(data_dir, prefix + '_' + k +'.npy')
         assert isinstance(v, torch.Tensor)
         arr = v.numpy()
@@ -427,6 +428,7 @@ def load_tensors(data_dir: str,
     for file in files:
         arr = np.load(
             osp.join(data_dir, file), allow_pickle=True)
+        key = file.strip(prefix + "_")
         tensors[file] = torch.from_numpy(arr)
     return tensors
     
@@ -441,14 +443,13 @@ def create_loaders(mode: str,
                     predict_at: int, 
                     window_size: int, 
                     debug:bool=False, 
-                    save_tensors: bool=False, 
-                    load_tensors: bool=True,
+                    do_save_tensors: bool=False, 
+                    do_load_tensors: bool=True,
                     weights=[]):
     """
     #TODO: Write small doc
     """
-    if not load_tensors:
-        print('NOT LOADING TENSORS - CREATING FROM SCRATCH')
+    if not do_load_tensors:
     #Load numpyy arrays form disk
         vision_data = np.load(osp.join(data_dir, vision_name),
                               allow_pickle=True)
@@ -462,7 +463,8 @@ def create_loaders(mode: str,
             train_split=train_test_split,
             predict_at=predict_at,
             window_size=window_size)
-        if save_tensors:
+        print('Done Preprocessing - preparing to save the tensors')
+        if do_save_tensors:
             save_tensors(train_tensors,
                          data_dir,
                          prefix='tens_train')

@@ -27,8 +27,8 @@ def main(args):
         train_test_split=args.train_test_split,
         predict_at=args.predict_at,
         window_size=args.window_size, 
-        save_tensors=args.save_tensors,
-        load_tensors=args.load_tensors)
+        do_save_tensors=args.save_tensors,
+        do_load_tensors=args.load_tensors)
 
     return None
 
