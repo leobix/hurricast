@@ -310,8 +310,8 @@ class Prepro:
         train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
         test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
         #THEO: Add the displacement baseline
-        train_tensors.insert(4,   tgt_displacement_baseline)
-        test_tensors.insert(4,  tgt_test_displacement_baseline)
+        train_tensors.insert(4, tgt_displacement_baseline)
+        test_tensors.insert(4, tgt_test_displacement_baseline)
         #Théo: Add named args
         names = (
             'x_viz', 'x_stat',
