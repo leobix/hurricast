@@ -217,8 +217,8 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
         storm = hurdat.get_storm((name, year))
         forecast = storm.get_operational_forecasts()
         #choose models
-        #"Ideally we are interested in SHIFOR5/SHIPS/GFS/EMXI/HWRF" - Leonard
-        model_list = set(['HWRF','SHIP','SHF5','GFS','EMXI','CLAP5','NAM','AP01','CMC']).intersection(forecast.keys())
+        all_models = ['CLP5','SHF5','A98E','P91E','SHIP','DSHP','GFSO','LBAR','CMC','EMXI','NGPS','GFDL','HWRF','UKXI','GUNS','FSSE','AEMN','OFCL']
+        model_list = set(all_models).intersection(forecast.keys())
         #create empty df
         df_out = pd.DataFrame(columns=['datetime'])
         for model in model_list:
@@ -228,7 +228,7 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
                 temp = df.loc[df['fhr']==pred]
                 #select columns
                 temp = temp[['lat','lon','vmax','mslp']]
-                temp = temp.add_prefix(str(model)+'_'+str(pred)+'_')
+                temp = temp.add_prefix(str(model)+'_'+str(pred)+'_') 
                 temp['datetime'] = pd.to_datetime(time, format = '%Y%m%d%H')
                 df_model = pd.concat([df_model, temp], axis=0)
             if df_model.shape[0]>0:
