@@ -293,6 +293,159 @@ d_km[X_test_EP_34.index].mean()
 d_km[X_test_WP_34.index].mean()
 
 
+####LOADING X_STAT WITH BASELINES
+
+X_test_baseline = pd.DataFrame(np.load('../data/X_test_stat_1980_34_20_120_withforecast_2661_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True))
+
+names_baselines = [#'SID',
+         'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
+         'STORM_SPEED', 'cat_cos_day', 'cat_sign_day', 'COS_STORM_DIR', 'SIN_STORM_DIR',
+         'COS_LAT', 'SIN_LAT', 'COS_LON', 'SIN_LON', 'cat_storm_category',
+         'EMXI_24_lat', 'EMXI_24_lon', 'EMXI_24_vmax', 'EMXI_24_mslp',
+         'SHIP_24_lat', 'SHIP_24_lon', 'SHIP_24_vmax', 'SHIP_24_mslp',
+         'AP01_24_lat', 'AP01_24_lon', 'AP01_24_vmax', 'AP01_24_mslp',
+         'CMC_24_lat', 'CMC_24_lon', 'CMC_24_vmax', 'CMC_24_mslp',
+         'NAM_24_lat', 'NAM_24_lon', 'NAM_24_vmax', 'NAM_24_mslp',
+         'HWRF_24_lat', 'HWRF_24_lon', 'HWRF_24_vmax', 'HWRF_24_mslp',
+         'cat_basin_AN', 'cat_basin_EP', 'cat_basin_NI', 'cat_basin_SA',
+         'cat_basin_SI', 'cat_basin_SP', 'cat_basin_WP',
+         #'cat_nature_DS', 'cat_nature_ET',
+         #'cat_nature_MX', 'cat_nature_NR', 'cat_nature_SS', 'cat_nature_TS',
+         'STORM_DISPLACEMENT_X', 'STORM_DISPLACEMENT_Y']
+
+names_all_baselines = names_baselines * 8#args.window_size
+
+for i in range(len(names_all_baselines)):
+    names_all_baselines[i] += '_' + str(i // 48)
+
+X_test_baseline.columns = names_all_baselines
+
+
+####BASELINES GEOLOC
+
+forecast = 'NAM'
+
+X_test_withBASELINE_LOC_HWRF = X_test[X_test_baseline[forecast + '_24_lat_7'] >= -320]
+tgt_displacement_test_BASELINE_LOC_HWRF_lat = tgt_displacement_test[:,0][X_test_baseline[forecast + '_24_lat_7'] >= -320]
+tgt_displacement_test_BASELINE_LOC_HWRF_lon = tgt_displacement_test[:,1][X_test_baseline[forecast + '_24_lon_7'] >= -320]
+baseline_displacement_HWRF_lat = X_test_baseline[X_test_baseline[forecast + '_24_lat_7'] > -320]
+baseline_displacement_HWRF_lon = X_test_baseline[X_test_baseline[forecast + '_24_lon_7'] > -320]
+
+
+LATS_BASE = np.array(baseline_displacement_HWRF_lat[forecast + '_24_lat_7'])
+LONS_BASE = np.array(baseline_displacement_HWRF_lon[forecast + '_24_lon_7'])
+LATS_TEST_ = np.array(X_test_withBASELINE_LOC_HWRF['LAT_7'] + np.array(tgt_displacement_test_BASELINE_LOC_HWRF_lat)*std_dx+mean_dx)
+LONS_TEST_ = np.array(X_test_withBASELINE_LOC_HWRF['LON_7'] + np.array(tgt_displacement_test_BASELINE_LOC_HWRF_lon)*std_dy+mean_dy)
+
+LATS_PRED_ = np.array(LATS_PRED[X_test_withBASELINE_LOC_HWRF.index])
+LONS_PRED_ = np.array(LONS_PRED[X_test_withBASELINE_LOC_HWRF.index])
+
+d_km_baseline = np.zeros(len(LATS_BASE))
+for i in range(len(LATS_BASE)):
+    d_km_baseline[i] = get_distance_km(LONS_BASE[i], LATS_BASE[i], LONS_TEST_[i], LATS_TEST_[i])
+
+print("MAE Distance HWRF: ", d_km_baseline.mean())
+
+d_km_pred = np.zeros(len(LONS_PRED_))
+for i in range(len(LONS_PRED_)):
+    d_km_pred[i] = get_distance_km(LONS_PRED_[i], LATS_PRED_[i], LONS_TEST_[i], LATS_TEST_[i])
+
+
+print("MAE Distance pred vs " + forecast + ": ", d_km_pred.mean())
+
+
+#### BASELINE INTENSITY
+
+#SHIP
+
+X_test_withBASELINE_SPEED_SHIP = X_test[X_test_baseline['SHIP_24_vmax_7'] > 0]
+X_test_withBASELINE_SPEED_SHIP_total = X_test_total[X_test_baseline['SHIP_24_vmax_7'] > 0]
+tgt_intensity_test_BASELINE_SPEED_SHIP = tgt_intensity_test[X_test_baseline['SHIP_24_vmax_7'] > 0]
+baseline_intensity_SHIP = X_test_baseline[X_test_baseline['SHIP_24_vmax_7'] > 0]
+baseline_intensity_SHIP = baseline_intensity_SHIP['SHIP_24_vmax_7']
+
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_SHIP*std_+mean_, xgb2.predict(X_test_withBASELINE_SPEED_SHIP)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_SHIP*std_+mean_, xgb.predict(X_test_withBASELINE_SPEED_SHIP_total)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_SHIP*std_+mean_, baseline_intensity_SHIP))
+
+#HWRF
+
+X_test_withBASELINE_SPEED_HWRF = X_test[X_test_baseline[forecast + '_24_vmax_7'] > 0]
+X_test_withBASELINE_SPEED_HWRF_total = X_test_total[X_test_baseline[forecast + '_24_vmax_7'] > 0]
+tgt_intensity_test_BASELINE_SPEED_HWRF = tgt_intensity_test[X_test_baseline[forecast + '_24_vmax_7'] > 0]
+baseline_intensity_HWRF = X_test_baseline[X_test_baseline[forecast + '_24_vmax_7'] > 0]
+baseline_intensity_HWRF = baseline_intensity_HWRF[forecast + '_24_vmax_7']
+
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_HWRF*std_+mean_, xgb2.predict(X_test_withBASELINE_SPEED_HWRF)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_HWRF*std_+mean_, xgb.predict(X_test_withBASELINE_SPEED_HWRF_total)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_HWRF*std_+mean_, baseline_intensity_HWRF))
+
+#HWRF + SHIP
+index = X_test_baseline.loc[X_test_baseline[forecast + '_24_vmax_7'] > 0].loc[X_test_baseline['SHIP_24_vmax_7'] > 0].index
+
+X_test_withBASELINE_SPEED_ = X_test.loc[X_test_baseline[forecast + '_24_vmax_7'] > 0].loc[X_test_baseline['SHIP_24_vmax_7'] > 0]
+X_test_withBASELINE_SPEED_total_ = X_test_total[index]
+tgt_intensity_test_BASELINE_SPEED_ = tgt_intensity_test[index]
+baseline_intensity_ = X_test_baseline.loc[X_test_baseline[forecast + '_24_vmax_7'] > 0].loc[X_test_baseline['SHIP_24_vmax_7'] > 0]
+baseline_intensity_ = baseline_intensity_[forecast + '_24_vmax_7']
+
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_*std_+mean_, xgb2.predict(X_test_withBASELINE_SPEED_)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_*std_+mean_, xgb.predict(X_test_withBASELINE_SPEED_total_)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_*std_+mean_, baseline_intensity_))
+
+index2 = X_test_baseline.loc[X_test_baseline[forecast + '_24_vmax_7'] > 0].loc[X_test_baseline['SHIP_24_vmax_7'] > 0].loc[X_test_baseline['cat_basin_AN_0'] == 1].index
+
+X_test_withBASELINE_SPEED_2 = X_test.loc[X_test_baseline[forecast + '_24_vmax_7'] > 0].loc[X_test_baseline['SHIP_24_vmax_7'] > 0].loc[X_test_baseline['cat_basin_AN_0'] == 1]
+X_test_withBASELINE_SPEED_total_2 = X_test_total[index2]
+tgt_intensity_test_BASELINE_SPEED_2 = tgt_intensity_test[index2]
+baseline_intensity_2 = X_test_baseline.loc[X_test_baseline[forecast + '_24_vmax_7'] > 0].loc[X_test_baseline['SHIP_24_vmax_7'] > 0].loc[X_test_baseline['cat_basin_AN_0'] == 1]
+baseline_intensity_2 = baseline_intensity_2[forecast + '_24_vmax_7']
+
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_2*std_+mean_, xgb2.predict(X_test_withBASELINE_SPEED_2)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_2*std_+mean_, xgb.predict(X_test_withBASELINE_SPEED_total_2)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_2*std_+mean_, baseline_intensity_2))
+
+#EMXI
+
+X_test_withBASELINE_SPEED_EMXI = X_test[X_test_baseline['EMXI_24_vmax_7'] > 0]
+X_test_withBASELINE_SPEED_EMXI_total = X_test_total[X_test_baseline['EMXI_24_vmax_7'] > 0]
+tgt_intensity_test_BASELINE_SPEED_EMXI = tgt_intensity_test[X_test_baseline['EMXI_24_vmax_7'] > 0]
+baseline_intensity_EMXI = X_test_baseline[X_test_baseline['EMXI_24_vmax_7'] > 0]
+baseline_intensity_EMXI = baseline_intensity_EMXI['EMXI_24_vmax_7']
+
+#Same in AN
+
+X_test_withBASELINE_SPEED_EMXI_AN = X_test_withBASELINE_SPEED_EMXI.loc[X_test_withBASELINE_SPEED_EMXI['cat_basin_AN_0'] == 1]
+X_test_withBASELINE_SPEED_EMXI_total_AN = X_test_total[X_test_withBASELINE_SPEED_EMXI_AN.index]
+tgt_intensity_test_BASELINE_SPEED_EMXI_AN = tgt_intensity_test[X_test_withBASELINE_SPEED_EMXI_AN.index]
+baseline_intensity_EMXI_AN = X_test_baseline.loc[X_test_baseline['EMXI_24_vmax_7'] > 0].loc[X_test_baseline['cat_basin_AN_0'] == 1]['EMXI_24_vmax_7']
+
+
+
+
+##
+
+X_test_withBASELINE_SPEED_EMXI_AN = X_test_withBASELINE_SPEED_EMXI.loc[X_test_withBASELINE_SPEED_EMXI['cat_basin_AN_0'] == 1]
+X_test_withBASELINE_SPEED_EMXI_total_AN = X_test_total[X_test_withBASELINE_SPEED_EMXI_AN.index]
+tgt_intensity_test_BASELINE_SPEED_EMXI_AN = tgt_intensity_test[X_test_withBASELINE_SPEED_EMXI_AN.index]
+baseline_intensity_EMXI_AN = X_test_baseline.loc[X_test_baseline['EMXI_24_vmax_7'] > 0].loc[X_test_baseline['cat_basin_AN_0'] == 1]['EMXI_24_vmax_7']
+
+
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_EMXI_AN*std_+mean_, xgb2.predict(X_test_withBASELINE_SPEED_EMXI_AN)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_EMXI_AN*std_+mean_, xgb.predict(X_test_withBASELINE_SPEED_EMXI_total_AN)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_EMXI_AN*std_+mean_, baseline_intensity_EMXI_AN))
+
+#EP
+
+X_test_withBASELINE_SPEED_EMXI_AN = X_test_withBASELINE_SPEED_EMXI.loc[X_test_withBASELINE_SPEED_EMXI['cat_basin_EP_0'] == 1]
+X_test_withBASELINE_SPEED_EMXI_total_AN = X_test_total[X_test_withBASELINE_SPEED_EMXI_AN.index]
+tgt_intensity_test_BASELINE_SPEED_EMXI_AN = tgt_intensity_test[X_test_withBASELINE_SPEED_EMXI_AN.index]
+baseline_intensity_EMXI_AN = X_test_baseline.loc[X_test_baseline['EMXI_24_vmax_7'] > 0].loc[X_test_baseline['cat_basin_EP_0'] == 1]['EMXI_24_vmax_7']
+
+
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_EMXI_AN*std_+mean_, xgb2.predict(X_test_withBASELINE_SPEED_EMXI_AN)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_EMXI_AN*std_+mean_, xgb.predict(X_test_withBASELINE_SPEED_EMXI_total_AN)*std_+mean_))
+print("MAE intensity: ", mean_absolute_error(tgt_intensity_test_BASELINE_SPEED_EMXI_AN*std_+mean_, baseline_intensity_EMXI_AN))
 
 
 
