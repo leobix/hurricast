@@ -228,7 +228,7 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
                 temp = df.loc[df['fhr']==pred]
                 #select columns
                 temp = temp[['lat','lon','vmax','mslp']]
-                temp = temp.add_prefix(str(model)+'_'+str(pred)+'_') 
+                temp = temp.add_prefix(str(model)+'_'+str(pred)+'_')
                 temp['datetime'] = pd.to_datetime(time, format = '%Y%m%d%H')
                 df_model = pd.concat([df_model, temp], axis=0)
             if df_model.shape[0]>0:
@@ -317,7 +317,6 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
         #add category one_hot
         #df0 = add_one_hot(df0, df0['wind_category'], 'category')
 
-    print('df0 columns :', df0.columns)
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
     storms = sort_storm(df0, min_wind, min_steps)
     # pad the trajectories to a fix length
@@ -329,6 +328,7 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
     m, n, t_max, t_min, t_hist = tensor_shape(d)
     # create the tensor
     t, p_list = create_tensor(d)
+    print('columns in tensor:', p_list)
 
     #put t in format storm * timestep * features
     e = t.transpose((2, 0, 1))
