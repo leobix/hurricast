@@ -122,7 +122,7 @@ def add_data_parser(parser):
     
     parser.add_argument(
         '--save_tensors', 
-        default='store_true', 
+        action='store_true', 
         help="Whether to save the newly create directly.\
             In that case, the tensors will be saved under\
             data_dir/train_tensor_KEY.npy (numpy format)")
