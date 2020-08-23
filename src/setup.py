@@ -113,8 +113,7 @@ def add_data_parser(parser):
                         default=0.8)
 
     #save_parser = parser.add_mutually_exclusive_group()
-    parser.add_argument(
-        '--load_tensors', 
+    parser.add_argument('--load_tensors', 
         action='store_true', 
         help="Whether to load the tensors from disk.\
             In that case, the tensors must be named under the convention \
@@ -122,7 +121,7 @@ def add_data_parser(parser):
     
     parser.add_argument(
         '--save_tensors', 
-        default='store_true', 
+        action='store_true', 
         help="Whether to save the newly create directly.\
             In that case, the tensors will be saved under\
             data_dir/train_tensor_KEY.npy (numpy format)")

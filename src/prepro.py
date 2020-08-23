@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import os
 import os.path as osp
+import copy
 from torch.utils.data import TensorDataset, DataLoader
 from typing import Dict, List
 
@@ -310,8 +311,8 @@ class Prepro:
         train_tensors[-2] = (train_tensors[-2] - m_dis)/s_dis
         test_tensors[-2] = (test_tensors[-2] - m_dis)/s_dis
         #THEO: Add the displacement baseline
-        train_tensors.insert(4,   tgt_displacement_baseline)
-        test_tensors.insert(4,  tgt_test_displacement_baseline)
+        train_tensors.insert(4, tgt_displacement_baseline)
+        test_tensors.insert(4, tgt_test_displacement_baseline)
         #Théo: Add named args
         names = (
             'x_viz', 'x_stat',
@@ -366,8 +367,9 @@ def filter_keys(train_tensors: Dict[str, torch.Tensor],
     return train_tensors, test_tensors
 
 
-def create_collate_fn(keys_model: list=['x_viz', 'x_stat'], 
-                     keys_loss: list=['trg_y']):
+def create_collate_fn(dataset_keys: List[str],
+                    keys_model: list=['x_viz', 'x_stat'], 
+                    keys_loss: list=['trg_y']):
     """
     Create a collate fn to feed dict of tensors to the models.
     
@@ -375,15 +377,25 @@ def create_collate_fn(keys_model: list=['x_viz', 'x_stat'],
         1: Dict with keys=keys_models, namely x_viz, x_stat (args to model.fwd)
         2: Dict with keys=keys_loss, namely x_viz, x_stat (args to loss func)
     """
-    def _collate_fn(batch, keys_model, keys_loss):
-        
+    indices_mod = {i: k for i, k in enumerate(dataset_keys) if k in keys_model}
+    #idx = {i: k for i, k in enumerate(dataset_keys) if k not in keys_model}
+    idx_loss = (set(range(3)) - set(indices_mod.keys())).pop()
+    indices_loss = {idx_loss: keys_loss[0]}
+
+    #0: x_viz, 1: 'tgt_intensity_cat', ...
+    #idx_model = {}
+    #idx_loss = {
+    #    i: k for i, k in idx_map.items() if k not keys_model}
+
+    def _collate_fn(batch, indices_model, indices_loss):
         tupled_batch = list(zip(*batch))
-        in_model = { k: torch.stack(v) for k, v in zip(keys_model, tupled_batch)}
-        in_loss = {keys_loss[0]: torch.stack(tupled_batch[-1])}
+        in_model = {k: torch.stack(tupled_batch[i]) for i,k in indices_model.items()}
+        in_loss = {k: torch.stack(tupled_batch[i]) for i,k in indices_loss.items()}
+        #in_loss = {keys_loss[0]: torch.stack(tupled_batch[idx_loss[0]])}
         #print(in_model, in_loss)
         return in_model, in_loss
     
-    return lambda batch:  _collate_fn(batch, keys_model, keys_loss)
+    return lambda batch:  _collate_fn(batch, indices_mod, indices_loss)
 
 
 def save_tensors(tensors: dict, 
@@ -400,6 +412,7 @@ def save_tensors(tensors: dict,
         data_dir/{prefix}_{dict_key}.npy
     """
     for k, v in tensors.items():
+        print('Saving - ', k)
         file = osp.join(data_dir, prefix + '_' + k +'.npy')
         assert isinstance(v, torch.Tensor)
         arr = v.numpy()
@@ -419,6 +432,9 @@ def load_tensors(data_dir: str,
     prefix: str - The tensors will be saved under the format 
         data_dir/{prefix}_{dict_key}.npy
     """
+    def clean_up_name(name:str, prefix:str, suffix:str):
+        return name.split(prefix+"_")[-1].split(suffix)[0]
+    
     tensors = {}
     
     files = tuple(
@@ -427,8 +443,28 @@ def load_tensors(data_dir: str,
     for file in files:
         arr = np.load(
             osp.join(data_dir, file), allow_pickle=True)
-        tensors[file] = torch.from_numpy(arr)
+        key = clean_up_name(file, prefix=prefix, suffix=".npy")
+        tensors[key] = torch.from_numpy(arr)
     return tensors
+    
+
+def get_baseline(eval_tensors, mode):
+    MAP = {
+    'intensity': None, 
+    'intensity_cat': 'tgt_intensity_cat',
+    'displacement':'tgt_displacement'}
+    modes = {#Modes and associated tasks
+    'intensity': 'regression',
+    'displacement': 'regression',
+    'intensity_cat': 'classification'}
+    
+    task = modes.get(mode)
+    MODE = MAP.get(mode) 
+        
+    tgt = copy.deepcopy(eval_tensors.get(MODE)) if MODE is not None else None
+    baseline = eval_tensors.get(MODE + "_baseline") if MODE is not None else None
+        
+    return {"model_outputs": baseline, "target": tgt, "task": task}
     
 
 @CheckMode        
@@ -441,13 +477,13 @@ def create_loaders(mode: str,
                     predict_at: int, 
                     window_size: int, 
                     debug:bool=False, 
-                    save_tensors: bool=False, 
-                    load_tensors: bool=True,
+                    do_save_tensors: bool=False, 
+                    do_load_tensors: bool=True,
                     weights=[]):
     """
     #TODO: Write small doc
     """
-    if not load_tensors:
+    if not do_load_tensors:
     #Load numpyy arrays form disk
         vision_data = np.load(osp.join(data_dir, vision_name),
                               allow_pickle=True)
@@ -461,7 +497,8 @@ def create_loaders(mode: str,
             train_split=train_test_split,
             predict_at=predict_at,
             window_size=window_size)
-        if save_tensors:
+        print('Done Preprocessing - preparing to save the tensors')
+        if do_save_tensors:
             save_tensors(train_tensors,
                          data_dir,
                          prefix='tens_train')
@@ -473,11 +510,12 @@ def create_loaders(mode: str,
         train_tensors = load_tensors(data_dir, prefix='tens_train')
         test_tensors = load_tensors(data_dir, prefix='tens_test')
 
-
+    test_baseline = get_baseline(test_tensors, mode)
     #Filter the relevant keys
     train_tensors, test_tensors = filter_keys(
         train_tensors, test_tensors, mode=mode)
 
+    print(train_tensors.keys())
     #Unroll in tensordataset
     train_ds = TensorDataset(*train_tensors.values())
     test_ds = TensorDataset(*test_tensors.values())
@@ -486,7 +524,7 @@ def create_loaders(mode: str,
         train_ds = train_ds[:N_DEBUG]
         test_ds = test_ds[:N_DEBUG]
     #Create collate_fn 
-    collate_fn = create_collate_fn()
+    collate_fn = create_collate_fn(train_tensors.keys())
         
     #if len(weights)==0:
 
@@ -503,7 +541,7 @@ def create_loaders(mode: str,
     #TODO: Add Weighted Sampler
     if len(weights) > 0: 
         pass
-    return train_loader, test_loader
+    return train_loader, test_loader, test_baseline
 
 
 
