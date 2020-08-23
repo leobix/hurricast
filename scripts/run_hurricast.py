@@ -18,7 +18,8 @@ def main(args):
     task = modes[args.mode]
     print('MODE AND TASK: {} | {}'.format(args.mode, task))
     
-    train_loader, val_loader, val_baselines = prepro.create_loaders(
+    train_loader, val_loader,\
+         val_baselines = prepro.create_loaders(
         mode=args.mode,
         data_dir=args.data_dir,
         vision_name=args.vision_name,
@@ -32,8 +33,9 @@ def main(args):
     
     if val_baselines.get("target") is not None:
         baselines_results = metrics.get_metrics(**val_baselines)
+        print("Baseline_results: \n", baselines_results)
     
-
+    
     #========================
     encoder_conf = config.create_config(args.encoder_config)
     decoder_conf = config.create_config(args.decoder_config)
@@ -49,7 +51,7 @@ def main(args):
     train_loss_fn, eval_loss_fn, \
         metrics_fn = metrics.create_metrics_fn(task)
 
-    print("Using model", model)
+    #print("Using model", model)
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=args.lr)
@@ -57,6 +59,15 @@ def main(args):
     if args.sgd:
         optimizer = torch.optim.SGD(
             model.parameters(), lr=args.lr, momentum=0.9)
+    
+    #print(model)
+    #in_m, in_loss = next(iter(train_loader))
+    #for k, v in in_m.items():
+    #    print(k, v.size())
+    #for k, v in in_loss.items():
+    #    print(k, v.size())
+
+
     #=====================================
     best_model, \
         optimizer, \

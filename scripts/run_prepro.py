@@ -18,7 +18,7 @@ def main(args):
     task = modes[args.mode]
     print('MODE AND TASK: {} | {}'.format(args.mode, task))
     
-    train_loader, val_loader = prepro.create_loaders(
+    train_loader, val_loader, _ = prepro.create_loaders(
         mode=args.mode,
         data_dir=args.data_dir,
         vision_name=args.vision_name,
