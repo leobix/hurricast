@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import os
 import os.path as osp
+import copy
 from torch.utils.data import TensorDataset, DataLoader
 from typing import Dict, List
 
@@ -420,6 +421,9 @@ def load_tensors(data_dir: str,
     prefix: str - The tensors will be saved under the format 
         data_dir/{prefix}_{dict_key}.npy
     """
+    def clean_up_name(name:str, prefix:str, suffix:str):
+        return name.split(prefix+"_")[-1].split(suffix)[0]
+    
     tensors = {}
     
     files = tuple(
@@ -428,9 +432,28 @@ def load_tensors(data_dir: str,
     for file in files:
         arr = np.load(
             osp.join(data_dir, file), allow_pickle=True)
-        key = file.strip(prefix + "_")
-        tensors[file] = torch.from_numpy(arr)
+        key = clean_up_name(file, prefix=prefix, suffix=".npy")
+        tensors[key] = torch.from_numpy(arr)
     return tensors
+    
+
+def get_baseline(eval_tensors, mode):
+    MAP = {
+    'intensity': None, 
+    'intensity_cat': 'tgt_intensity_cat',
+    'displacement':'tgt_displacement'}
+    modes = {#Modes and associated tasks
+    'intensity': 'regression',
+    'displacement': 'regression',
+    'intensity_cat': 'classification'}
+    
+    task = modes.get(mode)
+    MODE = MAP.get(mode) 
+        
+    tgt = copy.deepcopy(eval_tensors.get(MODE)) if MODE is not None else None
+    baseline = eval_tensors.get(MODE + "_baseline") if MODE is not None else None
+        
+    return {"model_outputs": baseline, "target": tgt, "task": task}
     
 
 @CheckMode        
@@ -476,11 +499,12 @@ def create_loaders(mode: str,
         train_tensors = load_tensors(data_dir, prefix='tens_train')
         test_tensors = load_tensors(data_dir, prefix='tens_test')
 
-
+    test_baseline = get_baseline(test_tensors, mode)
     #Filter the relevant keys
     train_tensors, test_tensors = filter_keys(
         train_tensors, test_tensors, mode=mode)
 
+    
     #Unroll in tensordataset
     train_ds = TensorDataset(*train_tensors.values())
     test_ds = TensorDataset(*test_tensors.values())
@@ -506,7 +530,7 @@ def create_loaders(mode: str,
     #TODO: Add Weighted Sampler
     if len(weights) > 0: 
         pass
-    return train_loader, test_loader
+    return train_loader, test_loader, test_baseline
 
 
 

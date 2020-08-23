@@ -18,7 +18,7 @@ def main(args):
     task = modes[args.mode]
     print('MODE AND TASK: {} | {}'.format(args.mode, task))
     
-    train_loader, val_loader = prepro.create_loaders(
+    train_loader, val_loader, val_baselines = prepro.create_loaders(
         mode=args.mode,
         data_dir=args.data_dir,
         vision_name=args.vision_name,
@@ -28,7 +28,11 @@ def main(args):
         predict_at=args.predict_at,
         window_size=args.window_size, 
         do_save_tensors=False,
-        load_tensors=True)
+        do_load_tensors=True)
+    
+    if val_baselines.get("target") is not None:
+        baselines_results = metrics.get_metrics(**val_baselines)
+    
 
     #========================
     encoder_conf = config.create_config(args.encoder_config)
@@ -39,7 +43,7 @@ def main(args):
         mode=args.mode, 
         encoder_config=encoder_conf,
         decoder_config=decoder_conf, 
-        args=args)
+        args=args) #Move to device automatically
    
     #====================
     train_loss_fn, eval_loss_fn, \
