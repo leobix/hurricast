@@ -431,7 +431,7 @@ def load_tensors(data_dir: str,
     return tensors
     
 
-@CheckMode        
+@CheckMode     
 def create_loaders(mode: str,
                     data_dir: str, 
                     vision_name: str, 
@@ -440,7 +440,7 @@ def create_loaders(mode: str,
                     train_test_split: float, 
                     predict_at: int, 
                     window_size: int, 
-                    debug:bool=False, 
+                    debug: bool=False, 
                     save_tensors: bool=False, 
                     load_tensors: bool=True,
                     weights=[]):
