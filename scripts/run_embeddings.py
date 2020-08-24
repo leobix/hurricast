@@ -228,6 +228,10 @@ print("Accuracy: ", accuracy_score(tgt_intensity_cat_test, xgb3.predict(X_test_t
 
 X_test_baseline = pd.DataFrame(np.load('../data/X_test_stat_1980_34_20_120_withforecast_2661_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True))
 
+X_test_dates = pd.DataFrame(np.load('../data/X_test_stat_with_dates_columns_1980_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy', allow_pickle=True)[:,:4])
+
+X_test_dates.columns = ['YEAR', 'MONTH', 'DAY', 'HOUR']
+
 names_baselines = [#'SID',
          'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND',
          'STORM_SPEED', 'cat_cos_day', 'cat_sign_day', 'COS_STORM_DIR', 'SIN_STORM_DIR',
@@ -250,6 +254,8 @@ for i in range(len(names_all_baselines)):
     names_all_baselines[i] += '_' + str(i // 48)
 
 X_test_baseline.columns = names_all_baselines
+
+X_test_baseline = pd.concat([X_test_baseline, X_test_dates], axis = 1)
 
 
 #### SPARSE LOADING
@@ -372,6 +378,84 @@ def compare_perf_intensity(xgb_total, basin = 'AN', forecast = 'HWRF', last_stor
         print("MAE intensity basin " + basin + " Official Forecast " + forecast + " : ",
               mean_absolute_error(tgt_[-last_storms:], baseline_1[-last_storms:]))
 
+
+def compare_perf_intensity(xgb_total, basin = 'AN', forecast = 'HWRF', last_storms = 1000, mode = 'vmax'):
+    index = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1].index#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+    #X_test_withBASELINE = X_test.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+    X_test_withBASELINE_total = X_test_total[index]
+    baseline_ = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+    baseline_1 = baseline_[forecast + '_24_'+mode+'_7']
+    if mode == 'vmax':
+        tgt_ = np.array(tgt_intensity_test[index] * std_ + mean_)
+        preds = xgb_total.predict(X_test_withBASELINE_total) * std_ + mean_
+        #print("MAE intensity basin " + basin + " X stat vs "+ forecast + " : ", mean_absolute_error(tgt_intensity_test_withBASELINE * std_ + mean_,
+                                                     #xgb.predict(X_test_withBASELINE) * std_ + mean_))
+        print("MAE intensity basin " + basin + " Hurricast : ", np.around(mean_absolute_error(tgt_, preds), decimals = 2), "with std ", np.around(np.std(tgt_ - preds), decimals=2))
+        print("MAE intensity basin " + basin + " Official Forecast "+ forecast + " : ",
+              np.around(mean_absolute_error(tgt_, baseline_1), decimals = 2), "with std ", np.around(np.std(tgt_ - baseline_1), decimals = 2))
+        print("Percentage of missed intensification > 20kn Hurricast: ", np.around(sum(tgt_ - preds > 20)/len(preds) * 100, decimals = 2))
+        print("Percentage of missed intensification > 20kn Official Forecast: ", np.around(sum(tgt_ - baseline_1 > 20) / len(baseline_1) * 100, decimals =2))
+        print("\nMAE intensity basin " + basin + " Hurricast last", last_storms, ": ", np.around(mean_absolute_error(tgt_[-last_storms:], preds[-last_storms:]), decimals=2))
+        print("MAE intensity basin " + basin + " Official Forecast " + forecast + " : ",
+              np.around(mean_absolute_error(tgt_[-last_storms:], baseline_1[-last_storms:]), decimals=2))
+
+
+train_xgb_intensity(forecast = 'SHIP', basin = 'EP', max_depth=8, n_estimators = 120, learning_rate = 0.07, subsample = 0.8, min_child_weight = 1)
+
+
+def compare_perf_intensity_per_year(xgb_total, year, forecast2, basin = 'AN', forecast = 'HWRF', mode = 'vmax'):
+    if forecast2 != None:
+        index = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[X_test_baseline['cat_basin_' + basin + '_0'] == 1].index  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        # X_test_withBASELINE = X_test.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        baseline_ = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline['cat_basin_' + basin + '_0'] == 1]  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        baseline_2 = baseline_[forecast2 + '_24_' + mode + '_7']
+    else:
+        index = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1].index#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        #X_test_withBASELINE = X_test.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        baseline_ = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+    X_test_withBASELINE_total = X_test_total[index]
+    baseline_1 = baseline_[forecast + '_24_'+mode+'_7']
+    if mode == 'vmax':
+        tgt_ = np.array(tgt_intensity_test[index] * std_ + mean_)
+        print("Total number of steps for comparison: ", len(tgt_))
+        preds = xgb_total.predict(X_test_withBASELINE_total) * std_ + mean_
+        #print("MAE intensity basin " + basin + " X stat vs "+ forecast + " : ", mean_absolute_error(tgt_intensity_test_withBASELINE * std_ + mean_,
+                                                     #xgb.predict(X_test_withBASELINE) * std_ + mean_))
+        print("Year ", year, " MAE intensity basin " + basin + " Hurricast : ", np.around(mean_absolute_error(tgt_, preds), decimals = 2), "with std ", np.around(np.std(tgt_ - preds), decimals=2))
+        print("Year ", year, " MAE intensity basin " + basin + " Official Forecast "+ forecast + " : ",
+              np.around(mean_absolute_error(tgt_, baseline_1), decimals = 2), "with std ", np.around(np.std(tgt_ - baseline_1), decimals = 2))
+        if forecast2 != None:
+            print("Year ", year, " MAE intensity basin " + basin + " Official Forecast " + forecast2 + " : ",
+                np.around(mean_absolute_error(tgt_, baseline_2), decimals=2), "with std ",
+                np.around(np.std(tgt_ - baseline_2), decimals=2))
+
+        #print("Year ", year, " Percentage of missed intensification > 20kn Hurricast: ", np.around(sum(tgt_ - preds > 20)/len(preds) * 100, decimals = 2))
+        #print("Year ", year, " Percentage of missed intensification > 20kn Official Forecast: ", np.around(sum(tgt_ - baseline_1 > 20) / len(baseline_1) * 100, decimals =2))
+
+
+def train_xgb_intensity_all_years(forecast2 = None, basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast = 'HWRF'):
+    train = X_train_total
+    #test = X_test_total
+    tgt_train = tgt_intensity_train
+    if sparse:
+        train = X_train_total_sparse_x
+        #test = X_test_total_sparse_x
+    if basin_only:
+        train = X_train_total[X_train['cat_basin_'+basin+'_0'] == 1]
+        tgt_train = tgt_intensity_train[X_train['cat_basin_'+basin+'_0'] == 1]
+    xgb_total = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate, subsample=subsample, min_child_weight=min_child_weight)
+    xgb_total.fit(train, tgt_train)
+    for year in range(2012, 2020):
+        try:
+            compare_perf_intensity_per_year(forecast2 = forecast2, xgb_total = xgb_total, basin=basin, forecast=forecast, mode='vmax', year = year)
+            print("\n")
+        except:
+            print("\n No forecasts for year ", year)
 
 
 ################################################################################################################################
