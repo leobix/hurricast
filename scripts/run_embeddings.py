@@ -201,6 +201,8 @@ X_test = X_test[cols]
 
 X_train_embed = np.load('../data/embeddings/X_train_embeds_1980_34_20_120_results8_16_20_44_28.npy', allow_pickle = True)
 X_test_embed = np.load('../data/embeddings/X_test_embeds_1980_34_20_120_results8_16_20_44_28.npy', allow_pickle = True)
+#X_train_embed = np.load('../data/embeddings/X_train_embed_1980_34_20_120_intensity.npy', allow_pickle = True)
+#X_test_embed = np.load('../data/embeddings/X_test_embed_1980_34_20_120_intensity.npy', allow_pickle = True)
 X_train_total = np.concatenate((X_train, X_train_embed), axis = 1)
 X_test_total = np.concatenate((X_test, X_test_embed), axis = 1)
 
@@ -279,12 +281,59 @@ numeric_weights_y = pickle.load(open("sparse_tot_y.pkl", "rb"))
 X_train_total_sparse_y = X_train_total_[numeric_weights_y.keys()]
 X_test_total_sparse_y = X_test_total_[numeric_weights_y.keys()]
 
+##### USE OFFICIAL FORECASTS
+
+cols = [c for c in X_test_baseline.columns if c.lower()[:4] == 'ship' or c.lower()[:4] == 'hwrf']
+X_new = pd.concat((pd.DataFrame(X_test_total), X_test_baseline[cols]), axis = 1)
+
+n = int(len(X_new)-5938)
+X_train_forecasts = X_new[:n]
+tgt_train_dis_forecasts = tgt_displacement_test[:n]
+X_test_forecasts = X_new[n:]
+tgt_test_dis_forecasts = tgt_displacement_test[n:]
+
+xgb_x = XGBRegressor(max_depth=8, n_estimators=120, learning_rate=0.07, subsample=0.7, min_child_weight=5)
+xgb_x.fit(X_train_forecasts, tgt_train_dis_forecasts[:, 0])
+
+xgb_y = XGBRegressor(max_depth=8, n_estimators=120, learning_rate = 0.07, subsample = 0.7, min_child_weight = 5)
+xgb_y.fit(X_train_forecasts, tgt_train_dis_forecasts[:,1])
+DLATS_PRED = np.array(xgb_x.predict(X_test_forecasts))*std_dx+mean_dx
+DLONS_PRED = np.array(xgb_y.predict(X_test_forecasts))*std_dy+mean_dy
+LATS_PRED = np.array(X_test[n:]['LAT_7'] + DLATS_PRED)
+LONS_PRED = np.array(X_test[n:]['LON_7'] + DLONS_PRED)
+LATS_TEST = np.array(X_test[n:]['LAT_7'] + np.array(tgt_test_dis_forecasts[:,0])*std_dx+mean_dx)
+LONS_TEST = np.array(X_test[n:]['LON_7'] + np.array(tgt_test_dis_forecasts[:,1])*std_dy+mean_dy)
+
+d_km = np.zeros(len(DLONS_PRED))
+for i in range(len(DLONS_PRED)):
+    d_km[i] = get_distance_km(LONS_PRED[i], LATS_PRED[i], LONS_TEST[i], LATS_TEST[i])
+
+print(d_km.mean())
+xgb_x = XGBRegressor(max_depth=8, n_estimators=120, learning_rate=0.07, subsample=0.7, min_child_weight=5)
+xgb_x.fit(X_test_total[:n], tgt_train_dis_forecasts[:, 0])
+
+xgb_y = XGBRegressor(max_depth=8, n_estimators=120, learning_rate = 0.07, subsample = 0.7, min_child_weight = 5)
+xgb_y.fit(X_test_total[:n], tgt_train_dis_forecasts[:,1])
+DLATS_PRED = np.array(xgb_x.predict(X_test_total[n:]))*std_dx+mean_dx
+DLONS_PRED = np.array(xgb_y.predict(X_test_total[n:]))*std_dy+mean_dy
+LATS_PRED = np.array(X_test[n:]['LAT_7'] + DLATS_PRED)
+LONS_PRED = np.array(X_test[n:]['LON_7'] + DLONS_PRED)
+LATS_TEST = np.array(X_test[n:]['LAT_7'] + np.array(tgt_test_dis_forecasts[:,0])*std_dx+mean_dx)
+LONS_TEST = np.array(X_test[n:]['LON_7'] + np.array(tgt_test_dis_forecasts[:,1])*std_dy+mean_dy)
+
+d_km = np.zeros(len(DLONS_PRED))
+for i in range(len(DLONS_PRED)):
+    d_km[i] = get_distance_km(LONS_PRED[i], LATS_PRED[i], LONS_TEST[i], LATS_TEST[i])
+
+print(d_km.mean())
+
+
 
 ####BASELINES GEOLOC
 
 
 
-def train_xgb_track(last_storms = 1000, basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast = 'HWRF'):
+def train_xgb_track(basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast = 'SHIP', forecast2 = None):
     train_x = X_train_total
     train_y = X_train_total
     test_x = X_test_total
@@ -305,13 +354,75 @@ def train_xgb_track(last_storms = 1000, basin_only = False, sparse = False, max_
     DLONS_PRED = np.array(xgb_y.predict(test_y)) * std_dy + mean_dy
     LATS_PRED_ = X_test['LAT_7'] + DLATS_PRED
     LONS_PRED_ = X_test['LON_7'] + DLONS_PRED
-    compare_perf_track(basin=basin, forecast=forecast, mode='lat', LATS_PRED_=LATS_PRED_, LONS_PRED_=LONS_PRED_, last_storms = last_storms)
+    compare_perf_track(basin=basin, forecast=forecast, forecast2 = forecast2, LATS_PRED_=LATS_PRED_, LONS_PRED_=LONS_PRED_)
+
+def train_xgb_track_all_years(use_forecast = False, basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast = 'SHIP', forecast2 = None):
+    train_x = X_train_total
+    train_y = X_train_total
+    test_x = X_test_total
+    test_y = X_test_total
+    tgt_train = tgt_displacement_train
+    if sparse:
+        train_x, train_y = X_train_total_sparse_x, X_train_total_sparse_y
+        test_x, test_y = X_test_total_sparse_x, X_test_total_sparse_y
+    if basin_only:
+        train_x = X_train_total[X_train['cat_basin_'+basin+'_0'] == 1]
+        train_y = train_x
+        tgt_train = tgt_displacement_train[X_train['cat_basin_'+basin+'_0'] == 1]
+    if use_forecast:
+        train_for = X_train_forecasts
+        tgt_train_for = tgt_train_dis_forecasts
+        test_for = X_test_forecasts
+        xgb_x = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate, subsample=subsample, min_child_weight=min_child_weight)
+        xgb_x.fit(train_for, tgt_train_for[:, 0])
+        xgb_y = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate, subsample=subsample, min_child_weight=min_child_weight)
+        xgb_y.fit(train_for, tgt_train_for[:, 1])
+        DLATS_PRED = np.array(xgb_x.predict(X_new)) * std_dx + mean_dx
+        DLONS_PRED = np.array(xgb_y.predict(X_new)) * std_dy + mean_dy
+    else:
+        xgb_x = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate,
+                             subsample=subsample, min_child_weight=min_child_weight)
+        xgb_x.fit(train_x, tgt_train[:, 0])
+        xgb_y = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate,
+                             subsample=subsample, min_child_weight=min_child_weight)
+        xgb_y.fit(train_y, tgt_train[:, 1])
+        DLATS_PRED = np.array(xgb_x.predict(test_x)) * std_dx + mean_dx
+        DLONS_PRED = np.array(xgb_y.predict(test_y)) * std_dy + mean_dy
+    LATS_PRED_2012 = X_test['LAT_7'] + DLATS_PRED
+    LONS_PRED_2012 = X_test['LON_7'] + DLONS_PRED
+    compare_perf_track(basin=basin, forecast=forecast, forecast2 = forecast2, LATS_PRED_=LATS_PRED_2012, LONS_PRED_=LONS_PRED_2012)
+    dict = {'year': [], 'num_samples': [], 'MAEs_full': [], 'std_full': [], 'MAES_2012': [], 'std_2012': [],
+            'MAES_SHIP': [], 'std_SHIP': [], 'MAES_HWRF': [], 'std_HWRF': []}
+    for year in range(2012, 2020):
+        try:
+            index = X_test_baseline.loc[
+                X_test_baseline['YEAR'] < year].index
+            X_test_to_train = X_test_total[index]
+            train = np.concatenate((X_train_total, X_test_to_train), axis=0)
+            tgt_train = np.concatenate((tgt_displacement_train, tgt_displacement_test[index]), axis=0)
+            xgb_x = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate,
+                                 subsample=subsample, min_child_weight=min_child_weight)
+            xgb_x.fit(train, tgt_train[:, 0])
+            xgb_y = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate,
+                                 subsample=subsample, min_child_weight=min_child_weight)
+            xgb_y.fit(train, tgt_train[:, 1])
+            DLATS_PRED = np.array(xgb_x.predict(test_x)) * std_dx + mean_dx
+            DLONS_PRED = np.array(xgb_y.predict(test_y)) * std_dy + mean_dy
+            LATS_PRED_ = X_test['LAT_7'] + DLATS_PRED
+            LONS_PRED_ = X_test['LON_7'] + DLONS_PRED
+            compare_perf_track_per_year(dict, LATS_PRED_, LONS_PRED_, LATS_PRED_2012, LONS_PRED_2012, forecast=forecast,
+                                            forecast2=forecast2, basin=basin,  year=year)
+            print("\n")
+        except:
+            print("\n No forecasts for year ", year)
+    return dict
 
 
 
-def train_xgb_intensity(last_storms = 1000, basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast = 'HWRF'):
+
+def train_xgb_intensity(forecast = 'SHIP', basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast2 = None):
     train = X_train_total
-    test = X_test_total
+    #test = X_test_total
     tgt_train = tgt_intensity_train
     if sparse:
         train = X_train_total_sparse_x
@@ -321,7 +432,7 @@ def train_xgb_intensity(last_storms = 1000, basin_only = False, sparse = False, 
         tgt_train = tgt_intensity_train[X_train['cat_basin_'+basin+'_0'] == 1]
     xgb_total = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate, subsample=subsample, min_child_weight=min_child_weight)
     xgb_total.fit(train, tgt_train)
-    compare_perf_intensity(xgb_total = xgb_total, basin=basin, forecast=forecast, mode='vmax', last_storms = last_storms)
+    compare_perf_intensity(xgb_total = xgb_total, basin=basin, forecast=forecast, mode='vmax', forecast2 = forecast2)
 
 #train_xgb_track(n_estimators = 90, max_depth = 7, learning_rate = 0.12, subsample = 0.7, min_child_weight = 5, basin = 'AN', forecast = 'HWRF') 82.14 and 117.26
 #train_xgb_track(n_estimators = 90, max_depth = 7, learning_rate = 0.1, subsample = 0.7, min_child_weight = 5, basin = 'EP', forecast = 'HWRF')
@@ -329,62 +440,72 @@ def train_xgb_intensity(last_storms = 1000, basin_only = False, sparse = False, 
 LATS_TEST = X_test['LAT_7'] + np.array(tgt_displacement_test[:,0])*std_dx+mean_dx
 LONS_TEST = X_test['LON_7'] + np.array(tgt_displacement_test[:,1])*std_dy+mean_dy
 
-def compare_perf_track(LATS_PRED_, LONS_PRED_, basin = 'AN', forecast = 'HWRF', mode = 'lat', last_storms = 1000):
-    index = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1].index#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
-    baseline_ = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+def compare_perf_track(LATS_PRED_, LONS_PRED_, basin = 'AN', forecast = 'SHIP', forecast2 = None):
+    mode = 'lat'
+    if forecast2 != None:
+        index = X_test_baseline.loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[X_test_baseline[
+                                                                             'cat_basin_' + basin + '_0'] == 1].index  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        baseline_ = X_test_baseline.loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        LATS_BASE_2 = np.array(baseline_[forecast2 + '_24_lat_7'])
+        LONS_BASE_2 = np.array(baseline_[forecast2 + '_24_lon_7'])
+    else:
+        index = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1].index#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        baseline_ = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
     LATS_TEST_ = X_test['LAT_7'] + np.array(tgt_displacement_test[:, 0])*std_dx+mean_dx
     LONS_TEST_ = X_test['LON_7'] + np.array(tgt_displacement_test[:, 1])*std_dy+mean_dy
-    baseline_1 = baseline_[forecast + '_24_'+mode+'_7']
-    if mode == 'lat':
-        baseline_2 = baseline_[forecast + '_24_lon_7']
-        LATS_BASE = np.array(baseline_1)
-        LONS_BASE = np.array(baseline_2)
-        LATS_TEST_ = np.array(LATS_TEST_[index])
-        LONS_TEST_ = np.array(LONS_TEST_[index])
-        LATS_PRED_ = np.array(LATS_PRED_[index])
-        LONS_PRED_ = np.array(LONS_PRED_[index])
-        d_km_baseline = np.zeros(len(LATS_BASE))
-        print(LATS_TEST_)
-        print(LATS_PRED_)
-        for i in range(len(LATS_BASE)):
-            d_km_baseline[i] = get_distance_km(LONS_BASE[i], LATS_BASE[i], LONS_TEST_[i], LATS_TEST_[i])
-        print("MAE Distance basin " + basin + " with " + forecast + ": ", d_km_baseline.mean(), "and std: ", d_km_baseline.std())
-        print("MAE Distance basin " + basin + " with " + forecast + ": last timesteps ", last_storms, ": ", d_km_baseline[-last_storms:].mean(), "and std: ", d_km_baseline[-last_storms:].std())
-        print("Number of busts > 200km", sum(d_km_baseline > 200))
-        d_km_pred = np.zeros(len(LONS_PRED_))
-        for i in range(len(LONS_PRED_)):
-            d_km_pred[i] = get_distance_km(LONS_PRED_[i], LATS_PRED_[i], LONS_TEST_[i], LATS_TEST_[i])
-        print("MAE Distance basin " + basin + " Hurricast: ", d_km_pred.mean(), "and std: ", d_km_pred.std())
-        print("MAE Distance basin " + basin + " Hurricast last timesteps ", last_storms, ": ", d_km_pred[-last_storms:].mean(), "and std: ", d_km_pred[-last_storms:].std())
-        print("Number of busts > 200km", sum(d_km_pred > 200))
+    baseline_1_x = baseline_[forecast + '_24_'+mode+'_7']
+    baseline_1_y = baseline_[forecast + '_24_lon_7']
+    LATS_BASE = np.array(baseline_1_x)
+    LONS_BASE = np.array(baseline_1_y)
+    LATS_TEST_ = np.array(LATS_TEST_[index])
+    LONS_TEST_ = np.array(LONS_TEST_[index])
+    LATS_PRED_ = np.array(LATS_PRED_[index])
+    LONS_PRED_ = np.array(LONS_PRED_[index])
+    d_km_baseline = np.zeros(len(LATS_BASE))
+    d_km_baseline2 = np.zeros(len(LATS_BASE))
+    d_km_pred = np.zeros(len(LONS_PRED_))
+    for i in range(len(LATS_BASE)):
+        d_km_baseline[i] = get_distance_km(LONS_BASE[i], LATS_BASE[i], LONS_TEST_[i], LATS_TEST_[i])
+        d_km_pred[i] = get_distance_km(LONS_PRED_[i], LATS_PRED_[i], LONS_TEST_[i], LATS_TEST_[i])
+        if forecast2 != None:
+            d_km_baseline2[i] = get_distance_km(LONS_BASE_2[i], LATS_BASE_2[i], LONS_TEST_[i], LATS_TEST_[i])
+    print("Number of timesteps:", len(LATS_BASE))
+    print(basin, 'Model | MAE | std')
+    print(forecast, np.around(d_km_baseline.mean(), decimals = 2), np.around(d_km_baseline.std(), decimals = 2))
+    print(str(forecast2), np.around(d_km_baseline2.mean(), decimals = 2), np.around(d_km_baseline2.std(), decimals = 2))
+    print("Hurricast", np.around(d_km_pred.mean(), decimals = 2), np.around(d_km_pred.std(), decimals = 2))
+    print("\nModel | Number of Busts > 200km | Percentage Bust")
+    print(forecast, sum(d_km_baseline > 200), np.around(sum(d_km_baseline > 200)*100/len(LATS_BASE), decimals = 2))
+    print(str(forecast2), sum(d_km_baseline2 > 200), np.around(sum(d_km_baseline2 > 200)*100/len(LATS_BASE), decimals =2))
+    print("Hurricast", sum(d_km_pred > 200), np.around(sum(d_km_pred > 200)*100/len(LATS_BASE), decimals = 2))
 
 
 
-def compare_perf_intensity(xgb_total, basin = 'AN', forecast = 'HWRF', last_storms = 1000, mode = 'vmax'):
-    index = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1].index#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
-    #X_test_withBASELINE = X_test.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+def compare_perf_intensity(xgb_total, basin = 'AN', forecast = 'SHIP', last_storms = 1000, mode = 'vmax', forecast2 = 'HWRF'):
+    if forecast2 != None:
+        index = X_test_baseline.loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[X_test_baseline[
+                                                                             'cat_basin_' + basin + '_0'] == 1].index  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        # X_test_withBASELINE = X_test.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        baseline_ = X_test_baseline.loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline['cat_basin_' + basin + '_0'] == 1]  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        baseline_2 = baseline_[forecast2 + '_24_' + mode + '_7']
+    else:
+        index = X_test_baseline.loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[X_test_baseline[
+                                                                             'cat_basin_' + basin + '_0'] == 1].index  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        # X_test_withBASELINE = X_test.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        baseline_ = X_test_baseline.loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline['cat_basin_' + basin + '_0'] == 1]  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
     X_test_withBASELINE_total = X_test_total[index]
-    baseline_ = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
-    baseline_1 = baseline_[forecast + '_24_'+mode+'_7']
-    if mode == 'vmax':
-        tgt_ = tgt_intensity_test[index] * std_ + mean_
-        preds = xgb_total.predict(X_test_withBASELINE_total) * std_ + mean_
-        #print("MAE intensity basin " + basin + " X stat vs "+ forecast + " : ", mean_absolute_error(tgt_intensity_test_withBASELINE * std_ + mean_,
-                                                     #xgb.predict(X_test_withBASELINE) * std_ + mean_))
-        print("MAE intensity basin " + basin + " Hurricast : ", mean_absolute_error(tgt_, preds))
-        print("MAE intensity basin " + basin + " Official Forecast "+ forecast + " : ",
-              mean_absolute_error(tgt_, baseline_1))
-        print("\n MAE intensity basin " + basin + " Hurricast last", last_storms, ": ", mean_absolute_error(tgt_[-last_storms:], preds[-last_storms:]))
-        print("MAE intensity basin " + basin + " Official Forecast " + forecast + " : ",
-              mean_absolute_error(tgt_[-last_storms:], baseline_1[-last_storms:]))
-
-
-def compare_perf_intensity(xgb_total, basin = 'AN', forecast = 'HWRF', last_storms = 1000, mode = 'vmax'):
-    index = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1].index#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
-    #X_test_withBASELINE = X_test.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
-    X_test_withBASELINE_total = X_test_total[index]
-    baseline_ = X_test_baseline.loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
-    baseline_1 = baseline_[forecast + '_24_'+mode+'_7']
+    baseline_1 = baseline_[forecast + '_24_' + mode + '_7']
     if mode == 'vmax':
         tgt_ = np.array(tgt_intensity_test[index] * std_ + mean_)
         preds = xgb_total.predict(X_test_withBASELINE_total) * std_ + mean_
@@ -393,17 +514,22 @@ def compare_perf_intensity(xgb_total, basin = 'AN', forecast = 'HWRF', last_stor
         print("MAE intensity basin " + basin + " Hurricast : ", np.around(mean_absolute_error(tgt_, preds), decimals = 2), "with std ", np.around(np.std(tgt_ - preds), decimals=2))
         print("MAE intensity basin " + basin + " Official Forecast "+ forecast + " : ",
               np.around(mean_absolute_error(tgt_, baseline_1), decimals = 2), "with std ", np.around(np.std(tgt_ - baseline_1), decimals = 2))
-        print("Percentage of missed intensification > 20kn Hurricast: ", np.around(sum(tgt_ - preds > 20)/len(preds) * 100, decimals = 2))
-        print("Percentage of missed intensification > 20kn Official Forecast: ", np.around(sum(tgt_ - baseline_1 > 20) / len(baseline_1) * 100, decimals =2))
+        print("MAE intensity basin " + basin + " Official Forecast " + forecast2 + " : ",
+              np.around(mean_absolute_error(tgt_, baseline_2), decimals=2), "with std ",
+              np.around(np.std(tgt_ - baseline_2), decimals=2))
+        print("Percentage of missed intensification > 20kn Hurricast: ", np.around(sum(abs(tgt_ - preds) > 20)/len(preds) * 100, decimals = 2))
+        print("Percentage of missed intensification > 20kn Official Forecast"+ forecast + " : ", np.around(sum(abs(tgt_ - baseline_1) > 20) / len(baseline_1) * 100, decimals =2))
+        print("Percentage of missed intensification > 20kn Official Forecast 2"+ forecast2 + " : ", np.around(sum(abs(tgt_ - baseline_2) > 20) / len(baseline_2) * 100, decimals =2))
         print("\nMAE intensity basin " + basin + " Hurricast last", last_storms, ": ", np.around(mean_absolute_error(tgt_[-last_storms:], preds[-last_storms:]), decimals=2))
         print("MAE intensity basin " + basin + " Official Forecast " + forecast + " : ",
               np.around(mean_absolute_error(tgt_[-last_storms:], baseline_1[-last_storms:]), decimals=2))
 
 
-train_xgb_intensity(forecast = 'SHIP', basin = 'EP', max_depth=8, n_estimators = 120, learning_rate = 0.07, subsample = 0.8, min_child_weight = 1)
+#train_xgb_intensity(forecast = 'SHIP', basin = 'EP', max_depth=8, n_estimators = 120, learning_rate = 0.07, subsample = 0.8, min_child_weight = 1)
+#train_xgb_intensity(forecast = 'SHIP', basin = 'AN', max_depth=8, n_estimators = 150, learning_rate = 0.07, subsample = 0.8, min_child_weight = 1, forecast2 = 'HWRF')
 
 
-def compare_perf_intensity_per_year(xgb_total, year, forecast2, basin = 'AN', forecast = 'HWRF', mode = 'vmax'):
+def compare_perf_intensity_per_year(dict, xgb_tot, xgb_total, year, forecast2, basin = 'AN', forecast = 'HWRF', mode = 'vmax'):
     if forecast2 != None:
         index = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[
             X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[
@@ -423,19 +549,94 @@ def compare_perf_intensity_per_year(xgb_total, year, forecast2, basin = 'AN', fo
     if mode == 'vmax':
         tgt_ = np.array(tgt_intensity_test[index] * std_ + mean_)
         print("Total number of steps for comparison: ", len(tgt_))
+        preds_1 = xgb_tot.predict(X_test_withBASELINE_total) * std_ + mean_
         preds = xgb_total.predict(X_test_withBASELINE_total) * std_ + mean_
         #print("MAE intensity basin " + basin + " X stat vs "+ forecast + " : ", mean_absolute_error(tgt_intensity_test_withBASELINE * std_ + mean_,
                                                      #xgb.predict(X_test_withBASELINE) * std_ + mean_))
-        print("Year ", year, " MAE intensity basin " + basin + " Hurricast : ", np.around(mean_absolute_error(tgt_, preds), decimals = 2), "with std ", np.around(np.std(tgt_ - preds), decimals=2))
+        print("Year ", year, " MAE intensity basin " + basin + " Hurricast trained full: ", np.around(mean_absolute_error(tgt_, preds), decimals = 2), "with std ", np.around(np.std(tgt_ - preds), decimals=2))
+        print("Year ", year, " MAE intensity basin " + basin + " Hurricast trained until 2012: ", np.around(mean_absolute_error(tgt_, preds_1), decimals = 2), "with std ", np.around(np.std(tgt_ - preds_1), decimals=2))
         print("Year ", year, " MAE intensity basin " + basin + " Official Forecast "+ forecast + " : ",
               np.around(mean_absolute_error(tgt_, baseline_1), decimals = 2), "with std ", np.around(np.std(tgt_ - baseline_1), decimals = 2))
         if forecast2 != None:
             print("Year ", year, " MAE intensity basin " + basin + " Official Forecast " + forecast2 + " : ",
                 np.around(mean_absolute_error(tgt_, baseline_2), decimals=2), "with std ",
                 np.around(np.std(tgt_ - baseline_2), decimals=2))
-
+        append_dict_intensity(dict, tgt_, preds, preds_1, baseline_1, baseline_2, year)
         #print("Year ", year, " Percentage of missed intensification > 20kn Hurricast: ", np.around(sum(tgt_ - preds > 20)/len(preds) * 100, decimals = 2))
         #print("Year ", year, " Percentage of missed intensification > 20kn Official Forecast: ", np.around(sum(tgt_ - baseline_1 > 20) / len(baseline_1) * 100, decimals =2))
+
+
+def compare_perf_track_per_year(dict, LATS_PRED_, LONS_PRED_, LATS_PRED_2012, LONS_PRED_2012, year, basin = 'AN', forecast = 'SHIP', forecast2 = None):
+    mode = 'lat'
+    if forecast2 != None:
+        index = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[
+            X_test_baseline[forecast + '_24_' + mode + '_7'] > -320].loc[X_test_baseline[
+                                                                             'cat_basin_' + basin + '_0'] == 1].index  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        baseline_ = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[
+            X_test_baseline[forecast2 + '_24_' + mode + '_7'] > -320].loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+        LATS_BASE_2 = np.array(baseline_[forecast2 + '_24_lat_7'])
+        LONS_BASE_2 = np.array(baseline_[forecast2 + '_24_lon_7'])
+    else:
+        index = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1].index#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+        baseline_ = X_test_baseline.loc[X_test_baseline['YEAR'] == year].loc[X_test_baseline[forecast + '_24_'+mode+'_7'] > -320].loc[X_test_baseline['cat_basin_'+basin+'_0'] == 1]#.loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0]
+    LATS_TEST_ = X_test['LAT_7'] + np.array(tgt_displacement_test[:, 0])*std_dx+mean_dx
+    LONS_TEST_ = X_test['LON_7'] + np.array(tgt_displacement_test[:, 1])*std_dy+mean_dy
+    baseline_1_x = baseline_[forecast + '_24_'+mode+'_7']
+    baseline_1_y = baseline_[forecast + '_24_lon_7']
+    LATS_BASE = np.array(baseline_1_x)
+    LONS_BASE = np.array(baseline_1_y)
+    LATS_TEST_ = np.array(LATS_TEST_[index])
+    LONS_TEST_ = np.array(LONS_TEST_[index])
+    LATS_PRED_ = np.array(LATS_PRED_[index])
+    LONS_PRED_ = np.array(LONS_PRED_[index])
+    LATS_PRED_2012 = np.array(LATS_PRED_2012[index])
+    LONS_PRED_2012 = np.array(LONS_PRED_2012[index])
+    d_km_baseline = np.zeros(len(LATS_BASE))
+    d_km_baseline2 = np.zeros(len(LATS_BASE))
+    d_km_pred = np.zeros(len(LONS_PRED_))
+    d_km_pred_2012 = np.zeros(len(LONS_PRED_))
+    for i in range(len(LATS_BASE)):
+        d_km_baseline[i] = get_distance_km(LONS_BASE[i], LATS_BASE[i], LONS_TEST_[i], LATS_TEST_[i])
+        d_km_pred[i] = get_distance_km(LONS_PRED_[i], LATS_PRED_[i], LONS_TEST_[i], LATS_TEST_[i])
+        d_km_pred_2012[i] = get_distance_km(LONS_PRED_2012[i], LATS_PRED_2012[i], LONS_TEST_[i], LATS_TEST_[i])
+        if forecast2 != None:
+            d_km_baseline2[i] = get_distance_km(LONS_BASE_2[i], LATS_BASE_2[i], LONS_TEST_[i], LATS_TEST_[i])
+    print("Year", year, "Number of timesteps:", len(LATS_BASE))
+    print(basin, 'Model | MAE | std')
+    print(forecast, np.around(d_km_baseline.mean(), decimals = 2), np.around(d_km_baseline.std(), decimals = 2))
+    print(str(forecast2), np.around(d_km_baseline2.mean(), decimals = 2), np.around(d_km_baseline2.std(), decimals = 2))
+    print("Hurricast Max Data", np.around(d_km_pred.mean(), decimals = 2), np.around(d_km_pred.std(), decimals = 2))
+    print("Hurricast Until 2012", np.around(d_km_pred_2012.mean(), decimals=2), np.around(d_km_pred_2012.std(), decimals=2))
+    print("\nModel | Number of Busts > 200km | Percentage Bust")
+    print(forecast, sum(d_km_baseline > 200), np.around(sum(d_km_baseline > 200)*100/len(LATS_BASE), decimals = 2))
+    print(str(forecast2), sum(d_km_baseline2 > 200), np.around(sum(d_km_baseline2 > 200)*100/len(LATS_BASE), decimals =2))
+    print("Hurricast", sum(d_km_pred > 200), np.around(sum(d_km_pred > 200)*100/len(LATS_BASE), decimals = 2))
+    append_dict_track(dict, d_km_baseline, d_km_baseline2, d_km_pred, d_km_pred_2012, year)
+
+def append_dict_track(dict, d_km_baseline, d_km_baseline2, d_km_pred, d_km_pred_2012, year):
+    dict['year'].append(year)
+    dict['num_samples'].append(len(d_km_baseline))
+    dict['MAEs_full'].append(np.around(d_km_pred.mean(), decimals = 2))
+    dict['std_full'].append(np.around(d_km_pred.std(), decimals = 2))
+    dict['MAES_2012'].append(np.around(d_km_pred_2012.mean(), decimals = 2))
+    dict['std_2012'].append(np.around(d_km_pred_2012.std(), decimals=2))
+    dict['MAES_SHIP'].append(np.around(d_km_baseline.mean(), decimals = 2))
+    dict['std_SHIP'].append(np.around(d_km_baseline.std(), decimals = 2))
+    dict['MAES_HWRF'].append(np.around(d_km_baseline2.mean(), decimals =2))
+    dict['std_HWRF'].append(np.around(d_km_baseline2.std(), decimals=2))
+
+def append_dict_intensity(dict, tgt_, preds, preds_1, baseline_1, baseline_2, year):
+    dict['year'].append(year)
+    dict['num_samples'].append(len(tgt_))
+    dict['MAEs_full'].append(np.around(mean_absolute_error(tgt_, preds), decimals = 2))
+    dict['std_full'].append(np.around(np.std(tgt_ - preds), decimals = 2))
+    dict['MAES_2012'].append(np.around(mean_absolute_error(tgt_, preds_1), decimals = 2))
+    dict['std_2012'].append(np.around(np.std(tgt_ - preds_1), decimals=2))
+    dict['MAES_SHIP'].append(np.around(np.std(tgt_ - baseline_1), decimals = 2))
+    dict['std_SHIP'].append(np.around(np.std(tgt_ - baseline_1), decimals = 2))
+    dict['MAES_HWRF'].append(np.around(mean_absolute_error(tgt_, baseline_2), decimals=2))
+    dict['std_HWRF'].append(np.around(np.std(tgt_ - baseline_2), decimals=2))
 
 
 def train_xgb_intensity_all_years(forecast2 = None, basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast = 'HWRF'):
@@ -456,6 +657,48 @@ def train_xgb_intensity_all_years(forecast2 = None, basin_only = False, sparse =
             print("\n")
         except:
             print("\n No forecasts for year ", year)
+
+def train_xgb_intensity_all_years_full_train(forecast2 = None, basin_only = False, sparse = False, max_depth = 8, n_estimators = 140, learning_rate = 0.15, subsample = 0.7, min_child_weight=5, basin = 'AN', forecast = 'HWRF'):
+    train = X_train_total
+    #test = X_test_total
+    tgt_train = tgt_intensity_train
+    if sparse:
+        train = X_train_total_sparse_x
+        #test = X_test_total_sparse_x
+    if basin_only:
+        train = X_train_total[X_train['cat_basin_'+basin+'_0'] == 1]
+        tgt_train = tgt_intensity_train[X_train['cat_basin_'+basin+'_0'] == 1]
+    xgb_total_1 = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate,
+                             subsample=subsample, min_child_weight=min_child_weight)
+    xgb_total_1.fit(train, tgt_train)
+    dict = {'year':[], 'num_samples':[], 'MAEs_full':[], 'std_full':[], 'MAES_2012':[], 'std_2012':[], 'MAES_SHIP':[], 'std_SHIP':[], 'MAES_HWRF':[], 'std_HWRF':[]}
+    for year in range(2012, 2020):
+        try:
+            index = X_test_baseline.loc[X_test_baseline['YEAR'] < year].index  # .loc[#X_test_baseline['SHIP_24_'+mode+'_7'] > 0].index
+            X_test_to_train = X_test_total[index]
+            train = np.concatenate((X_train_total, X_test_to_train), axis = 0)
+            tgt_train = np.concatenate((tgt_intensity_train, tgt_intensity_test[index]), axis = 0)
+            xgb_total = XGBRegressor(max_depth=max_depth, n_estimators=n_estimators, learning_rate=learning_rate,
+                                     subsample=subsample, min_child_weight=min_child_weight)
+            xgb_total.fit(train, tgt_train)
+            compare_perf_intensity_per_year(dict = dict, xgb_tot = xgb_total_1, forecast2 = forecast2, xgb_total = xgb_total, basin=basin, forecast=forecast, mode='vmax', year = year)
+            print("\n")
+        except:
+            print("\n No forecasts for year ", year)
+    return dict
+
+#####FEATURE SELECTION
+from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVR
+from sklearn.feature_selection import SelectFromModel
+
+clf = Pipeline([
+  ('feature_selection', SelectFromModel(LinearSVR(penalty="l1"))),
+  ('regression', XGBRegressor())
+])
+clf.fit(X_train_total, tgt_intensity_train)
+
+
 
 
 ################################################################################################################################
