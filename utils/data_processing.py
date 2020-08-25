@@ -211,6 +211,27 @@ def repad(t):
                 t[i,:,j]=t[i,:,ind-1]
     return t
 
+#add smooth feature for forecasts
+def smooth_forecast(df):
+    df['COS_LAT'] = np.cos(2 * np.pi * df['lat'] / 360)
+    df['SIN_LAT'] = np.sin(2 * np.pi * df['lat'] / 360)
+    df['COS_LON'] = np.cos(2 * np.pi * df['lon'] / 360)
+    df['SIN_LON'] = np.sin(2 * np.pi * df['lon'] / 360)
+    return df
+
+#add displacement
+def add_displacement_forecast(df, pred):
+    all_models = ['CLP5','SHF5','A98E','P91E','SHIP','DSHP','GFSO','LBAR','CMC','EMXI','NGPS','GFDL','HWRF','UKXI','GUNS','FSSE','AEMN','OFCL']
+    #loop over all models
+    for model in all_models:
+        col_lat = str(model)+'_'+str(pred)+'_lat'
+        col_lon = str(model)+'_'+str(pred)+'_lon'
+        #check if model column exists:
+        if col_lat in df.columns:
+            df['DISPLACEMENT_LAT_'+str(model)+'_'+str(pred)] = df[col_lat]-df['LAT']
+            df['DISPLACEMENT_LON_'+str(model)+'_'+str(pred)] = df[col_lon]-df['LON']
+    return df
+
 #function to get forecast of hurricane based on name and year
 def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
     try:
@@ -228,6 +249,9 @@ def get_forecast(hurdat, name, year, pred=24): #pred: hours prediction
                 temp = df.loc[df['fhr']==pred]
                 #select columns
                 temp = temp[['lat','lon','vmax','mslp']]
+                #smooth features
+                temp = smooth_forecast(temp)
+                #add model name as prefix
                 temp = temp.add_prefix(str(model)+'_'+str(pred)+'_')
                 temp['datetime'] = pd.to_datetime(time, format = '%Y%m%d%H')
                 df_model = pd.concat([df_model, temp], axis=0)
@@ -263,7 +287,7 @@ def join_forecast(df, pred=24):
 
         #no forecast for these basins
         if basin in ['SP','SI','NI','WP']:
-            df_all = pd.concat([df_all, df_stat], axis=0)
+            df_joined = df_stat
         else:
             #try to get forecast for particular storm
             df_forecast = get_forecast(hurdat, name, year, pred)
@@ -273,10 +297,13 @@ def join_forecast(df, pred=24):
                 df_forecast['NAME']= name
                 df_joined = df_stat.merge(df_forecast, how='left', left_on=['ISO_TIME','NAME'], right_on=['datetime','NAME'])
                 df_joined.drop('datetime', axis=1, inplace=True)
-                df_all = pd.concat([df_all, df_joined], axis=0)
+                #add displacement
+                df_joined = add_displacement_forecast(df_joined, pred)
             else:
                 print('no forecast for', name, year)
-                df_all = pd.concat([df_all, df_stat], axis=0)
+                df_joined = df_stat
+        df_all = pd.concat([df_all, df_joined], axis=0)
+
     #drop duplicated values
     df_all.drop_duplicates(subset=['SID','ISO_TIME'], keep='last', inplace=True)
     #sort values
@@ -288,6 +315,7 @@ def join_forecast(df, pred=24):
 
     print("The dataframe of storms with forecast has been created.")
     return df_all
+
 
 def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_steps=20,
                   max_steps=120, get_displacement=True, forecast=True, predict_period = 24, one_hot = True):
