@@ -316,9 +316,9 @@ def main(args):
     # Load files and reformat.
 
     x_stat_train = torch.Tensor(np.load('data/X_train_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                        allow_pickle=True).reshape(-1, args.window_size, 30)[:,:,:10])[:,-args.sub_window_size:].to(device)
+                                        allow_pickle=True).reshape(-1, args.window_size, 30)[:,:,:14])[:,-args.sub_window_size:].to(device)
     x_stat_test = torch.Tensor(np.load('data/X_test_stat_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
-                                       allow_pickle=True).reshape(-1, args.window_size, 30)[:,:,:10])[:,-args.sub_window_size:].to(device)
+                                       allow_pickle=True).reshape(-1, args.window_size, 30)[:,:,:14])[:,-args.sub_window_size:].to(device)
     x_viz_train = torch.Tensor(np.load('data/X_train_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
                                        allow_pickle = True).reshape(-1, args.window_size, 9, 25, 25))[:,-args.sub_window_size:].to(device)
     x_viz_test = torch.Tensor(np.load('data/X_test_vision_1980_34_20_120_w' + str(args.window_size) + '_at_' + str(args.predict_at) + '.npy',
@@ -384,8 +384,8 @@ def main(args):
         means = x_viz_train.mean(dim=(0, 1, 3, 4))
         stds = x_viz_train.std(dim=(0, 1, 3, 4))
 
-        means_stat = x_stat_train[:,:,:6].mean(dim=(0, 1))
-        stds_stat = x_stat_train[:,:,:6].std(dim=(0, 1))
+        means_stat = x_stat_train.mean(dim=(0, 1))
+        stds_stat = x_stat_train.std(dim=(0, 1))
 
         for i in range(len(means)):
             x_viz_train[:, :, i] = (x_viz_train[:, :, i] - means[i]) / stds[i]
