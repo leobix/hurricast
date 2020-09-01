@@ -12,15 +12,34 @@ warnings.filterwarnings('ignore')
 dtype = torch.float
 device = torch.device("cpu")
 
-
 #convert columns to numeric values
-#and interpolate missing values
 def numeric_data(data):
-    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']:
+    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED','STORM_DIR']:
         data[i]=pd.to_numeric(data[i],errors='coerce').astype('float64')
-        data[i]=data[i].interpolate(method='linear')
     return data
 
+#fillna of _WIND and _PRES:
+def fillna_wind_pres(df):
+    #substitute source of information
+    sub_list = ['USA','TOKYO','CMA','HKO','NEWDELHI','MLC','TD9635','NEUMANN','DS824','TD9636','WELLINGTON','NADI']
+    #for two features
+    for feature in ['_WIND','_PRES']:
+        #loop over sub sources in order
+        for sub in sub_list:
+            col_sub = pd.to_numeric(df[sub+feature],errors='coerce').astype('float64')
+            df['WMO'+feature].fillna(col_sub, inplace=True)
+        print('after fillna, nan entries of %s is %s'%(feature, df.loc[df['WMO'+feature].isnull()].shape[0]))
+    return df 
+
+#interpolate, with limit = 1 on both directions
+def interpolate_data(data):
+    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']:
+        #use the nearest value to fillna, fill 1 value on both direction
+        data[i]=data[i].interpolate(method='nearest',limit=1, limit_direction='both')
+        print('after interpolate, nan entries of %s is %s'%(i, data.loc[data[i].isnull()].shape[0]))
+    return data
+
+#smooth periodic features to sin and cos
 def smooth_features(df):
     df['ISO_TIME'] = pd.to_datetime(df['ISO_TIME'], format= '%Y-%m-%d %H:%M:%S')
     df['cos_day'] = np.cos(2 * np.pi * df['ISO_TIME'].dt.day / 365)
@@ -327,10 +346,14 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
 
     data = pd.read_csv(path)
     data.drop(0, axis=0, inplace=True) #drop secondary column names
-    # select interesting columns
+    #numeric
+    data = numeric_data(data)
+    #fill na in wind and pressure features using alternative sources
+    data = fillna_wind_pres(data)
+    #interpolate other values
+    data = interpolate_data(data)
+    # select useful columns
     df0 = data[['SID','BASIN','NAME', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
-    # transform data from String to numeric
-    df0 = numeric_data(df0)
     # smooth cos & sign of day
     df0 = smooth_features(df0)
     # add wind category
