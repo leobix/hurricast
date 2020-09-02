@@ -29,7 +29,7 @@ def fillna_wind_pres(df):
             col_sub = pd.to_numeric(df[sub+feature],errors='coerce').astype('float64')
             df['WMO'+feature].fillna(col_sub, inplace=True)
         print('after fillna, nan entries of %s is %s'%(feature, df.loc[df['WMO'+feature].isnull()].shape[0]))
-    return df 
+    return df
 
 #interpolate, with limit = 1 on both directions
 def interpolate_data(data):
@@ -38,6 +38,12 @@ def interpolate_data(data):
         data[i]=data[i].interpolate(method='nearest',limit=1, limit_direction='both')
         print('after interpolate, nan entries of %s is %s'%(i, data.loc[data[i].isnull()].shape[0]))
     return data
+
+#check nan for each features
+def check_nan(data):
+    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']:
+            print('nan entries of %s is %s'%(i, data.loc[data[i].isnull()].shape[0]))
+    return
 
 #smooth periodic features to sin and cos
 def smooth_features(df):
@@ -90,36 +96,90 @@ def add_one_hot(df, df_col, prefix):
     print("one-hot added for ", df_col.name)
     return df_out
 
-def sort_storm(data, min_wind, min_steps = 5, max_steps = 120):
-    '''function to create dictionary of storm matrices
-    arguments:
-    data we want to cut
-    min_wind: the minimum wind speed to store data
-    '''
+# function to select storms based on specified requirements
+def select_storms(data, min_wind=25, min_steps = 5, max_steps = 120):
+    print('selecting storms according to min_wind, min_step, max_step requirements')
     #get unique storm_id:
     SID=pd.unique(data['SID']).tolist()
-    #remove empty SID
-    #if not dropna: SID.remove(' ')
-    #create empty dictionary
+
+    #create empty dictionary to store selected storms
     dict0={}
     ind = 0
     for i in range(len(SID)):
         #get data of a particular SID
         M = data.loc[data['SID'] == SID[i]]
         #cut off using min wind speed
-        #TODO : cut everything before, ie look for the right date
         try:
             t = M.index[M['WMO_WIND']>= min_wind][0]
             t0 = M.index[0]
         except:
             t = 0
         N = M.loc[M['WMO_WIND'] >= min_wind]
-        #save matrix in dict0
         if N.shape[0] > min_steps:
             ind+=1
-            dict0.update({ind:M.iloc[t-t0:max_steps+t-t0]})
+            dict0.update({ind: M.iloc[t-t0:max_steps+t-t0]})
+
+    #concatenate dict to df
+    data_out = pd.DataFrame()
+    for i in dict0:
+        data_out = pd.concat([data_out, dict0[i]], axis=0)
+    #reset index
+    data_out.reset_index(inplace=True, drop=True)
+    return data_out
+
+#function to check nan value for the features
+def check_nan(data):
+    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']:
+            print('nan entries of %s is %s'%(i, data.loc[data[i].isnull()].shape[0]))
+    return
+
+# def sort_storm(data, min_wind, min_steps = 5, max_steps = 120):
+#     '''function to create dictionary of storm matrices
+#     arguments:
+#     data we want to cut
+#     min_wind: the minimum wind speed to store data
+#     '''
+#     #get unique storm_id:
+#     SID=pd.unique(data['SID']).tolist()
+#     #remove empty SID
+#     #if not dropna: SID.remove(' ')
+#     #create empty dictionary
+#     dict0={}
+#     ind = 0
+#     for i in range(len(SID)):
+#         #get data of a particular SID
+#         M = data.loc[data['SID'] == SID[i]]
+#         #cut off using min wind speed
+#         #TODO : cut everything before, ie look for the right date
+#         try:
+#             t = M.index[M['WMO_WIND']>= min_wind][0]
+#             t0 = M.index[0]
+#         except:
+#             t = 0
+#         N = M.loc[M['WMO_WIND'] >= min_wind]
+#         #save matrix in dict0
+#         if N.shape[0] > min_steps:
+#             ind+=1
+#             dict0.update({ind:M.iloc[t-t0:max_steps+t-t0]})
+#     print("The dictionary of storms has been created.")
+#     return dict0
+
+#function to create dictionary of storm matrices
+def create_dict(data):
+    #get unique storm_id:
+    SID=pd.unique(data['SID']).tolist()
+    #create empty dictionary
+    dict0={}
+    ind = 0
+    for i in range(len(SID)):
+        #get data of a particular SID
+        M = data.loc[data['SID'] == SID[i]]
+        if M.shape[0]>0:
+            ind+=1
+            dict0.update({ind: M})
     print("The dictionary of storms has been created.")
     return dict0
+
 
 #instead of padding with 0, pad with latest values in loop
 def pad_traj(dict0, max_steps, nan = False):
@@ -352,8 +412,12 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
     data = fillna_wind_pres(data)
     #interpolate other values
     data = interpolate_data(data)
+    #select storms
+    data= select_storms(data)
     # select useful columns
     df0 = data[['SID','BASIN','NAME', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+    #check the nan features
+    check_nan(df0)
     # smooth cos & sign of day
     df0 = smooth_features(df0)
     # add wind category
@@ -369,7 +433,7 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
         #df0 = add_one_hot(df0, df0['wind_category'], 'category')
 
     # get a dict with the storms with a windspeed and number of timesteps greater to a threshold
-    storms = sort_storm(df0, min_wind, min_steps)
+    storms = create_dict(df0)
     # pad the trajectories to a fix length
     d = pad_traj(storms, max_steps)
     # print(d)
