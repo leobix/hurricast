@@ -418,6 +418,8 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
     df0 = data[['SID','BASIN','NAME', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
     #check the nan features
     check_nan(df0)
+    #fillna with 0
+    df0.fillna(value=0, inplace=True)
     # smooth cos & sign of day
     df0 = smooth_features(df0)
     # add wind category
