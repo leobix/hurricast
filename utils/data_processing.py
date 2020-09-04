@@ -18,7 +18,7 @@ def numeric_data(data):
         data[i]=pd.to_numeric(data[i],errors='coerce').astype('float64')
     return data
 
-#fillna of _WIND and _PRES:
+#fillna of _WIND and _PRES using alternative sources than WMO.
 def fillna_wind_pres(df):
     #substitute source of information
     sub_list = ['USA','TOKYO','CMA','HKO','NEWDELHI','MLC','TD9635','NEUMANN','DS824','TD9636','WELLINGTON','NADI']
@@ -34,12 +34,11 @@ def fillna_wind_pres(df):
 #interpolate, with limit = 1 on both directions
 def interpolate_data(data):
     for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']:
-        #use the nearest value to fillna, fill 1 value on both direction
-        data[i]=data[i].interpolate(method='nearest',limit=1, limit_direction='both')
-        print('after interpolate, nan entries of %s is %s'%(i, data.loc[data[i].isnull()].shape[0]))
+        #use the linear interpolation value to fillna, fill 2 value on both direction
+        data[i]=data[i].interpolate(method='linear', limit=2, limit_direction='forward')
     return data
 
-#check nan for each features
+#function to check nan value for the features
 def check_nan(data):
     for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']:
             print('nan entries of %s is %s'%(i, data.loc[data[i].isnull()].shape[0]))
@@ -57,7 +56,6 @@ def smooth_features(df):
     df['COS_LON'] = np.cos(2 * np.pi * df['LON'] / 360)
     df['SIN_LON'] = np.sin(2 * np.pi * df['LON'] / 360)
     df = df.drop('STORM_DIR', axis=1)
-
     #df.loc[(df['ISO_TIME'].dt.hour <=11) & (df['ISO_TIME'].dt.hour >=0),'sign_day'] = 1
     return df
 
@@ -97,27 +95,31 @@ def add_one_hot(df, df_col, prefix):
     return df_out
 
 # function to select storms based on specified requirements
-def select_storms(data, min_wind=25, min_steps = 5, max_steps = 120):
+def select_storms(data, min_wind=34, min_steps = 20, max_steps = 120):
     print('selecting storms according to min_wind, min_step, max_step requirements')
     #get unique storm_id:
     SID=pd.unique(data['SID']).tolist()
-
-    #create empty dictionary to store selected storms
+    #create empty dictionary
     dict0={}
     ind = 0
     for i in range(len(SID)):
         #get data of a particular SID
         M = data.loc[data['SID'] == SID[i]]
-        #cut off using min wind speed
-        try:
-            t = M.index[M['WMO_WIND']>= min_wind][0]
-            t0 = M.index[0]
-        except:
-            t = 0
-        N = M.loc[M['WMO_WIND'] >= min_wind]
-        if N.shape[0] > min_steps:
-            ind+=1
-            dict0.update({ind: M.iloc[t-t0:max_steps+t-t0]})
+        M.reset_index(inplace=True, drop=True)
+        #use the linear interpolation value to fillna
+        M= interpolate_data(M)
+        length = M.loc[M['WMO_WIND'] >= min_wind].shape[0]
+        #if there is any index than min_wind
+        if length > min_steps:
+            #first index
+            i0 = M.index[M['WMO_WIND']>= min_wind][0]
+            i_max = min(max_steps, length)
+            M_selected = M.iloc[i0:i_max]
+            #record selected data
+            dict0.update({ind: M_selected})
+            ind +=1
+
+    print('number of storms selected is', ind)
 
     #concatenate dict to df
     data_out = pd.DataFrame()
@@ -125,44 +127,11 @@ def select_storms(data, min_wind=25, min_steps = 5, max_steps = 120):
         data_out = pd.concat([data_out, dict0[i]], axis=0)
     #reset index
     data_out.reset_index(inplace=True, drop=True)
+    #check nan entries
+    check_nan(data_out)
+    #fillna with zero
+    data_out.fillna(value=0, inplace=True)
     return data_out
-
-#function to check nan value for the features
-def check_nan(data):
-    for i in ['LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED']:
-            print('nan entries of %s is %s'%(i, data.loc[data[i].isnull()].shape[0]))
-    return
-
-# def sort_storm(data, min_wind, min_steps = 5, max_steps = 120):
-#     '''function to create dictionary of storm matrices
-#     arguments:
-#     data we want to cut
-#     min_wind: the minimum wind speed to store data
-#     '''
-#     #get unique storm_id:
-#     SID=pd.unique(data['SID']).tolist()
-#     #remove empty SID
-#     #if not dropna: SID.remove(' ')
-#     #create empty dictionary
-#     dict0={}
-#     ind = 0
-#     for i in range(len(SID)):
-#         #get data of a particular SID
-#         M = data.loc[data['SID'] == SID[i]]
-#         #cut off using min wind speed
-#         #TODO : cut everything before, ie look for the right date
-#         try:
-#             t = M.index[M['WMO_WIND']>= min_wind][0]
-#             t0 = M.index[0]
-#         except:
-#             t = 0
-#         N = M.loc[M['WMO_WIND'] >= min_wind]
-#         #save matrix in dict0
-#         if N.shape[0] > min_steps:
-#             ind+=1
-#             dict0.update({ind:M.iloc[t-t0:max_steps+t-t0]})
-#     print("The dictionary of storms has been created.")
-#     return dict0
 
 #function to create dictionary of storm matrices
 def create_dict(data):
@@ -273,12 +242,14 @@ def tensor_shape(dict0):
 #create a tensor
 def create_tensor(data): #data is dictionary form
     print('creating tensor, dropping SID and ISO_TIME features')
-    tensor = data[1].drop(['SID','ISO_TIME'], axis=1)
+    #keep only numeric values for the tensor
+    data_1 = data[1].select_dtypes(include='number')
+    tensor=data_1
     for i in range(2,len(data)+1,1):
-        data_i = data[i].drop(['SID','ISO_TIME'], axis=1)
+        data_i = data[i].select_dtypes(include='number')
         tensor=np.dstack((tensor, data_i))
     #return list of features
-    p_list = data[1].columns.tolist()
+    p_list = data_1.columns.tolist()
     print("The tensor has now been created.")
     return tensor, p_list
 
@@ -349,10 +320,17 @@ def join_forecast(df, pred=24):
     # read hurdat data set for both basins: north atlantic and east pacific
     hurdat = tracks.TrackDataset(basin='both',source='hurdat',include_btk=False)
 
-    #get list of storm names and year
+    #add storm names and datetime features
     df['NAME'] = df['NAME'].str.lower()
     df['YEAR'] = df['ISO_TIME'].dt.year
-    storm_list = df[['SID','NAME','YEAR','BASIN']].drop_duplicates(['SID']) #get list of storm names and year
+    df['MONTH'] = df['ISO_TIME'].dt.month
+    df['DAY'] = df['ISO_TIME'].dt.day
+    df['HOUR'] = df['ISO_TIME'].dt.hour
+    #make these features go to the front
+    df= df[['YEAR','MONTH','DAY','HOUR']+[col for col in df.columns if col!= ['YEAR','MONTH','DAY','HOUR']]]
+
+    #get storm list based on names and year
+    storm_list = df[['SID','NAME','YEAR','BASIN']].drop_duplicates(['SID'])
     storm_list.reset_index(inplace=True, drop=True)
 
     for i in range(len(storm_list)):
@@ -390,7 +368,7 @@ def join_forecast(df, pred=24):
     df_all.reset_index(inplace=True, drop=True)
 
     #drop added columns
-    df_all.drop(['NAME','YEAR'], inplace=True, axis=1)
+    df_all.drop(['NAME'], inplace=True, axis=1)
 
     print("The dataframe of storms with forecast has been created.")
     return df_all
@@ -410,11 +388,9 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
     data = numeric_data(data)
     #fill na in wind and pressure features using alternative sources
     data = fillna_wind_pres(data)
-    #interpolate other values
-    data = interpolate_data(data)
     #select storms
     data= select_storms(data)
-    # select useful columns
+    # keep only useful columns
     df0 = data[['SID','BASIN','NAME', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
     #check the nan features
     check_nan(df0)
@@ -500,25 +476,25 @@ def prepare_tabular_data_vision(path="./data/last3years.csv", min_wind=34, min_s
 #     t3 = repad(t3)
 #     return t3, p_list
 
-
-# #allows to keep only specific columns
-def select_data(data):
-     return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
-
-def get_distance_km(lon1, lat1, lon2, lat2):
-     '''
-     Using haversine formula (https://www.movable-type.co.uk/scripts/latlong.html)
-     '''
-     R=6371e3 # meters (earth's radius)
-     phi_1=math.radians(lat1)
-     phi_2 = math.radians(lat2)
-     delta_phi=math.radians(lat2-lat1)
-     delta_lambda=math.radians(lon2-lon1)
-     a=np.power(math.sin(delta_phi/2),2) + math.cos(phi_1)*math.cos(phi_2)\
-       * np.power(math.sin(delta_lambda/2),2)
-     c= 2 * math.atan2(math.sqrt(a),math.sqrt(1-a))
-
-     return R*c/1000.
+#
+# # #allows to keep only specific columns
+# def select_data(data):
+#      return data[['SID', 'NUMBER', 'ISO_TIME', 'LAT', 'LON', 'WMO_WIND', 'WMO_PRES', 'DIST2LAND', 'STORM_SPEED', 'STORM_DIR']]
+#
+# def get_distance_km(lon1, lat1, lon2, lat2):
+#      '''
+#      Using haversine formula (https://www.movable-type.co.uk/scripts/latlong.html)
+#      '''
+#      R=6371e3 # meters (earth's radius)
+#      phi_1=math.radians(lat1)
+#      phi_2 = math.radians(lat2)
+#      delta_phi=math.radians(lat2-lat1)
+#      delta_lambda=math.radians(lon2-lon1)
+#      a=np.power(math.sin(delta_phi/2),2) + math.cos(phi_1)*math.cos(phi_2)\
+#        * np.power(math.sin(delta_lambda/2),2)
+#      c= 2 * math.atan2(math.sqrt(a),math.sqrt(1-a))
+#
+#      return R*c/1000.
 #
 # #compute the displacement from t=0
 # def add_displacement_distance(dict0):
@@ -586,3 +562,36 @@ def get_distance_km(lon1, lat1, lon2, lat2):
 # def add_storm_category_val(df):
 #     df['storm_category'] = df['WMO_WIND'].apply(sust_wind_to_cat_val) #add storm category
 #     return df
+
+
+
+# def sort_storm(data, min_wind, min_steps = 5, max_steps = 120):
+#     '''function to create dictionary of storm matrices
+#     arguments:
+#     data we want to cut
+#     min_wind: the minimum wind speed to store data
+#     '''
+#     #get unique storm_id:
+#     SID=pd.unique(data['SID']).tolist()
+#     #remove empty SID
+#     #if not dropna: SID.remove(' ')
+#     #create empty dictionary
+#     dict0={}
+#     ind = 0
+#     for i in range(len(SID)):
+#         #get data of a particular SID
+#         M = data.loc[data['SID'] == SID[i]]
+#         #cut off using min wind speed
+#         #TODO : cut everything before, ie look for the right date
+#         try:
+#             t = M.index[M['WMO_WIND']>= min_wind][0]
+#             t0 = M.index[0]
+#         except:
+#             t = 0
+#         N = M.loc[M['WMO_WIND'] >= min_wind]
+#         #save matrix in dict0
+#         if N.shape[0] > min_steps:
+#             ind+=1
+#             dict0.update({ind:M.iloc[t-t0:max_steps+t-t0]})
+#     print("The dictionary of storms has been created.")
+#     return dict0
