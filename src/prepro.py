@@ -366,7 +366,7 @@ def filter_keys(train_tensors: Dict[str, torch.Tensor],
     
     return train_tensors, test_tensors
 
-
+#======= OLD - tobe modified
 def create_collate_fn(keys_model: list=['x_viz', 'x_stat'], 
                      keys_loss: list=['trg_y']):
     """
@@ -385,7 +385,7 @@ def create_collate_fn(keys_model: list=['x_viz', 'x_stat'],
         return in_model, in_loss
     
     return lambda batch:  _collate_fn(batch, keys_model, keys_loss)
-
+#============
 
 def save_tensors(tensors: dict, 
                 data_dir: str, 
