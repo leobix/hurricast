@@ -366,9 +366,9 @@ def filter_keys(train_tensors: Dict[str, torch.Tensor],
     
     return train_tensors, test_tensors
 
-#======= OLD - tobe modified
-def create_collate_fn(keys_model: list=['x_viz', 'x_stat'], 
-                     keys_loss: list=['trg_y']):
+def create_collate_fn(dataset_keys: List[str],
+                    keys_model: list=['x_viz', 'x_stat'], 
+                    keys_loss: list=['trg_y']):
     """
     Create a collate fn to feed dict of tensors to the models.
     
@@ -376,16 +376,26 @@ def create_collate_fn(keys_model: list=['x_viz', 'x_stat'],
         1: Dict with keys=keys_models, namely x_viz, x_stat (args to model.fwd)
         2: Dict with keys=keys_loss, namely x_viz, x_stat (args to loss func)
     """
-    def _collate_fn(batch, keys_model, keys_loss):
-        
+    indices_mod = {i: k for i, k in enumerate(dataset_keys) if k in keys_model}
+    #idx = {i: k for i, k in enumerate(dataset_keys) if k not in keys_model}
+    idx_loss = (set(range(3)) - set(indices_mod.keys())).pop()
+    indices_loss = {idx_loss: keys_loss[0]}
+
+    #0: x_viz, 1: 'tgt_intensity_cat', ...
+    #idx_model = {}
+    #idx_loss = {
+    #    i: k for i, k in idx_map.items() if k not keys_model}
+
+    def _collate_fn(batch, indices_model, indices_loss):
         tupled_batch = list(zip(*batch))
-        in_model = { k: torch.stack(v) for k, v in zip(keys_model, tupled_batch)}
-        in_loss = {keys_loss[0]: torch.stack(tupled_batch[-1])}
+        in_model = {k: torch.stack(tupled_batch[i]) for i,k in indices_model.items()}
+        in_loss = {k: torch.stack(tupled_batch[i]) for i,k in indices_loss.items()}
+        #in_loss = {keys_loss[0]: torch.stack(tupled_batch[idx_loss[0]])}
         #print(in_model, in_loss)
         return in_model, in_loss
     
-    return lambda batch:  _collate_fn(batch, keys_model, keys_loss)
-#============
+    return lambda batch:  _collate_fn(batch, indices_mod, indices_loss)
+
 
 def save_tensors(tensors: dict, 
                 data_dir: str, 
@@ -504,7 +514,7 @@ def create_loaders(mode: str,
     train_tensors, test_tensors = filter_keys(
         train_tensors, test_tensors, mode=mode)
 
-    
+    print(train_tensors.keys())
     #Unroll in tensordataset
     train_ds = TensorDataset(*train_tensors.values())
     test_ds = TensorDataset(*test_tensors.values())
@@ -513,7 +523,7 @@ def create_loaders(mode: str,
         train_ds = train_ds[:N_DEBUG]
         test_ds = test_ds[:N_DEBUG]
     #Create collate_fn 
-    collate_fn = create_collate_fn()
+    collate_fn = create_collate_fn(train_tensors.keys())
         
     #if len(weights)==0:
 
