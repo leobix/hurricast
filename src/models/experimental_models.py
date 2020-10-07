@@ -381,7 +381,7 @@ class ExperimentalHurricast(nn.Module):
 
         return self.predictor(fused_x)
 
-    def get_embeddings(self, x_stat, x_viz):
+    def get_embeddings(self, x_stat, x_viz, xgb=True):
         """
         Forward pass to get the embeddings.
         """
@@ -394,7 +394,7 @@ class ExperimentalHurricast(nn.Module):
             fused_x = self.encode(x_viz)
             fused_x = self.fusion(x_stat, fused_x)
 
-        return self.decode(fused_x)
+        return self.decode(fused_x, xgb=xgb)
 
 
 @RegisterModel('ExpTRANSFORMER')
@@ -503,7 +503,7 @@ class ExpTRANSFORMER(nn.Module):
             self.n_in, self.dropout,
             max_len=self.max_len_pe)
 
-    def forward(self, x_fuz):
+    def forward(self, x_fuz, xgb=False):
         """
         x_fuz: bs, T, H
         """
@@ -512,11 +512,11 @@ class ExpTRANSFORMER(nn.Module):
         #invert bs, T before transformer
         out = self.transformer_layers(out.transpose(0, 1))
         out = out.transpose(0,1) #invert Again
-        
+        if xgb:
+            return out
         out = self.pool_fn(out)
         
         out = self.activation_fn(out)
-        
         return out
 
 
