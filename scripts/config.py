@@ -86,9 +86,37 @@ def transformer_config():
     return dict(
         n_in=128 + 14,
         n_head=2,
-        dim_feedforward=256,
+        dim_feedforward=128,
         num_layers=2,
-        dropout=0.1,
+        dropout=0.,
+        window_size=None,
+        n_out_unroll=None,
+        max_len_pe=10,
+        pool_method='default',
+        activation='tanh')
+
+@RegisterConfig('transformer_config_4')
+def transformer_config():
+    return dict(
+        n_in=128 + 14,
+        n_head=2,
+        dim_feedforward=128,
+        num_layers=4,
+        dropout=0.,
+        window_size=None,
+        n_out_unroll=None,
+        max_len_pe=10,
+        pool_method='default',
+        activation='tanh')
+
+@RegisterConfig('transformer_config_68')
+def transformer_config():
+    return dict(
+        n_in=128 + 14,
+        n_head=1,
+        dim_feedforward=64,
+        num_layers=1,
+        dropout=0.,
         window_size=None,
         n_out_unroll=None,
         max_len_pe=10,
@@ -118,6 +146,19 @@ def gru_config():
         rnn_num_layers=4,
         N_OUT=128,
         rnn_type='gru',
+        dropout=0.1,
+        activation_fn='tanh',
+        bidir=True)
+
+#Dec
+@RegisterConfig('lstm_config')
+def gru_config():
+    return dict(
+        n_in=128 + 14,
+        hidden_dim=128,
+        rnn_num_layers=2,
+        N_OUT=128,
+        rnn_type='lstm',
         dropout=0.1,
         activation_fn='tanh',
         bidir=True)
