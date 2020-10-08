@@ -360,8 +360,8 @@ class ExperimentalHurricast(nn.Module):
         return torch.cat([x_stat, x_viz], -1)
 
 
-    def decode(self, x):
-        return self.decoder(x)
+    def decode(self, x, xgb=False):
+        return self.decoder(x, xgb=xgb)
 
 
     def forward(self, x_stat, x_viz=None):
