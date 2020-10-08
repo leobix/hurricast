@@ -513,11 +513,14 @@ class ExpTRANSFORMER(nn.Module):
         out = self.transformer_layers(out.transpose(0, 1))
         out = out.transpose(0,1) #invert Again
         if xgb:
-            return out
+            out_xgb = out
         out = self.pool_fn(out)
         
         out = self.activation_fn(out)
-        return out
+	if xgb:
+	    return out, out_xgb
+	else:
+            return out
 
 
 @RegisterModel('ExpLSTM')
