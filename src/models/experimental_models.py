@@ -553,6 +553,7 @@ class ExpLSTM(nn.Module):
         self.activation = activation_fn
 
         self.rnn, self.fc = self.create_encoder(rec_cells(rnn_type))
+        self.rnn.flatten_parameters()
         self.activation_fn = self.create_activation_fn()
 
 
