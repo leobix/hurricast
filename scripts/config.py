@@ -138,7 +138,7 @@ def transformer_config_noviz():
         activation='tanh')
 
 #Dec
-@RegisterConfig('lstm_config')
+@RegisterConfig('lstm_config_4layers')
 def gru_config():
     return dict(
         n_in=128 + 14,

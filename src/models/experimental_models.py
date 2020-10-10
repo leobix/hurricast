@@ -515,11 +515,10 @@ class ExpTRANSFORMER(nn.Module):
         if xgb:
             out_xgb = out
         out = self.pool_fn(out)
-        
         out = self.activation_fn(out)
-	if xgb:
-	    return out, out_xgb
-	else:
+        if xgb:
+            return out,out_xgb
+        else:
             return out
 
 
