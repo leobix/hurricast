@@ -366,7 +366,6 @@ def filter_keys(train_tensors: Dict[str, torch.Tensor],
     
     return train_tensors, test_tensors
 
-
 def create_collate_fn(dataset_keys: List[str],
                     keys_model: list=['x_viz', 'x_stat'], 
                     keys_loss: list=['trg_y']):
@@ -524,7 +523,8 @@ def create_loaders(mode: str,
         train_ds = train_ds[:N_DEBUG]
         test_ds = test_ds[:N_DEBUG]
     #Create collate_fn 
-    collate_fn = create_collate_fn(train_tensors.keys())
+    train_collate_fn = create_collate_fn(train_tensors.keys())
+    test_collate_fn = create_collate_fn(test_tensors.keys())
         
     #if len(weights)==0:
 
@@ -532,12 +532,12 @@ def create_loaders(mode: str,
                             batch_size=batch_size, 
                             shuffle=True, 
                             drop_last=True,
-                            collate_fn=collate_fn)
+                            collate_fn=train_collate_fn)
 
     test_loader = DataLoader(test_ds, 
                             batch_size=batch_size, 
                             shuffle=False, 
-                            collate_fn=collate_fn)
+                            collate_fn=test_collate_fn)
     #TODO: Add Weighted Sampler
     if len(weights) > 0: 
         pass
