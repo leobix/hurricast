@@ -579,7 +579,7 @@ class ExpLSTM(nn.Module):
 
         return rnn, fc
 
-    def forward(self, x):
+    def forward(self, x, xgb=False):
         #TODO: Change the doc
         """
         Parameters:
@@ -599,9 +599,14 @@ class ExpLSTM(nn.Module):
         #outputs: bs , T , hidden * num_directions
         if self.rnn_type == 'lstm':
             hidden = hidden[0]
+        if xgb:
+            hidden_all = hidden
         hidden = self.activation_fn(
             self.fc(torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)))
-        return hidden
+        if xgb:
+            return hidden, hidden_all
+        else:
+            return hidden
 
     #def forward(self, x):
     #    return self.encode(x)
