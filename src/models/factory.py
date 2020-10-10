@@ -85,7 +85,7 @@ def create_model(mode,
         else vars(encoder_config)
     #Decoder: Update the config
     decoder_config = decoder_config if isinstance(decoder_config, dict)\
-        else vars(encoder_config)
+        else vars(decoder_config)
     
     _decoder = "ExpTRANSFORMER" if args.transformer else "ExpLSTM"
     _encoder = None if args.no_encoder else "CNNEncoder"
