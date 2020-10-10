@@ -88,6 +88,9 @@ def create_model(mode,
         else vars(decoder_config)
     
     _decoder = "ExpTRANSFORMER" if args.transformer else "ExpLSTM"
+    print('DECODER', _decoder)
+    print("CONFIG", decoder_config)
+
     _encoder = None if args.no_encoder else "CNNEncoder"
     model = MODEL_REGISTRY[
         'ExperimentalHurricast'](
