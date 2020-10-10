@@ -364,7 +364,7 @@ class ExperimentalHurricast(nn.Module):
         return self.decoder(x, xgb=xgb)
 
 
-    def forward(self, x_stat, x_viz=None):
+    def forward(self, x_stat, x_viz=None, xgb=False):
         """
         Forward pass, with ot without the Cnn/images.
         """
@@ -377,7 +377,7 @@ class ExperimentalHurricast(nn.Module):
             fused_x = self.encode(x_viz)
             fused_x = self.fusion(x_stat, fused_x)
         
-        fused_x = self.decode(fused_x)
+        fused_x = self.decode(fused_x, xgb)
 
         return self.predictor(fused_x)
 
