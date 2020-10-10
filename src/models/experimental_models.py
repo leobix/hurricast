@@ -503,7 +503,7 @@ class ExpTRANSFORMER(nn.Module):
             self.n_in, self.dropout,
             max_len=self.max_len_pe)
 
-    def forward(self, x_fuz):
+    def forward(self, x_fuz, ):
         """
         x_fuz: bs, T, H
         """
