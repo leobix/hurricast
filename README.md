@@ -6,5 +6,6 @@ https://arxiv.org/abs/2011.06125
 by Léonard Boussioux, Cynthia Zeng, Théo Guénais, Dimitris Bertsimas.
 
 The release of the clean code can be expected by end of January 2022.
+The latest code can be found in the ```dev_theo``` branch.
 
 
