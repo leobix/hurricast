@@ -1,17 +1,10 @@
-# hurricast
+# Hurricast
 
-This is the repository for Hurricast Project.  
+This is the code corresponding to the paper:
+Hurricane Forecasting: A Novel Multimodal Machine Learning Framework
+https://arxiv.org/abs/2011.06125
+by Léonard Boussioux, Cynthia Zeng, Théo Guénais, Dimitris Bertsimas.
 
-@Théo
-
-Please download the following zip file.
-https://drive.google.com/file/d/1viv4Li31JF6LVCt45i0lq8c9qZGhPlVP/view?usp=sharing
-and move it to data_era.
-Be sure it is named: geopotential_u_component_of_wind_v_component_of_wind
-
-Thn the code for using vision is vision_architecture.ipynb
-This is the only file you need to look at for now.
-
-There I give you some explanations of the data.
+The release of the clean code can be expected by end of January 2022.
 
 
