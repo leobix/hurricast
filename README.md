@@ -2,29 +2,23 @@
 
 This is the repository for Hurricast Project.  
 
-## Data:
-- https://drive.google.com/file/d/1viv4Li31JF6LVCt45i0lq8c9qZGhPlVP/view?usp=sharing
-- Move it to data_era.
-- Be sure it is named: geopotential_u_component_of_wind_v_component_of_wind
-
 ## Structure 
-- **(NEW)** run.py
+- run.py
 - utils/
   - utils_vision_data.py
   - data_processing.py	
-  - **(NEW)** models.py	
-  - **(NEW)** plot.py	
+  - models.py	
+  - plot.py	
 
 ## Update 
 **How to use ?**
 - scripts: The python file to run a model and model configs.
   run_hurricast.py and config.py 
-- The command line parser is still the same (for now). Details in src/setup.py
+- The command line parser is in src/setup.py
 
 The entire code base is wrapped up in src. 
 - prepro.py :
-  - 1. $\rightarrow$ Class to process the data: unchanged, except from 
-using named dictionaries as the output. 
+  - 1. $\rightarrow$ Class to process the data
   - 2. Add a collate function that allows to batch the data using dictionary. Together with a dataloader\
   the command ```next(iter(loader))``` will output a dictionary. 
   ```py
@@ -66,10 +60,8 @@ class TRANSFORMER(nn.Module):
   ...
 ```
 
-The baselines and older versions are now in a separate file (baselines.py).
-The file experimental_models.py is still experimental, but class inheritance will probably allow us to do something cool I hope :sunglass:
-
-The training curriculum is more modular, but mostly unchanged (see notebook)
+The baselines and older versions are in a separate file (baselines.py).
+The file experimental_models.py is still experimental, but class inheritance can probably allow us to do something cool :sunglass:
 
 ____
 About the "experimental model"
@@ -99,3 +91,6 @@ python run_hurricast.py\
     --train_test_split
     #Can add --no_stat if we want the vision data only
 ```
+
+## Data:
+- The data is very large (>30Gb): we are looking for a solution to host it.
