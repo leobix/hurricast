@@ -1,6 +1,6 @@
-# Hurricast - Development branch :hammer:
+# Hurricast - Hurricane Forecasting with Deep Learning :hammer:
 
-This is the repository for Hurricast Project.  
+This is the repository for the Hurricast Project.  
 
 ## Structure 
 - run.py
