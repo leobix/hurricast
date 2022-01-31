@@ -1,4 +1,4 @@
-# Hurricast - Hurricane Forecasting with Deep Learning :storm:
+# Hurricast - Hurricane Forecasting with Deep Learning :thunder:
 
 This is the repository for the Hurricast Project.  
 
