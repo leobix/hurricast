@@ -43,12 +43,13 @@ Here is an example of the CNN-encoder Transformer-decoder architecture we used:
 
 ## Code Structure 
 
-We bring your attention to a few particular files:
+We bring your attention to a few particular files and folders:
 
-- ```src```: holds the core of the code, in particular:
+- ```src/```: holds the core of the code, in particular:
     - ```run.py```: 
     - ```setup.py```: command line parser with all arguments
-    - utils/
+    - ```models/```: contains all code related to building encoder-decoder models
+    - ```utils/```: contains all utils function (e.g., data preprocessing, data downloading)
       - utils_vision_data.py
       - data_processing.py	
       - models.py	
