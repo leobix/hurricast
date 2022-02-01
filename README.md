@@ -7,7 +7,7 @@ Furthermore, the inclusion of Hurricast into an operational forecast consensus m
 
 The overall pipeline follows this 3-step mechanism.
 
-[pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
+![pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
 
 
 ## Structure 
