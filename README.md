@@ -20,7 +20,7 @@ The overall multimodal pipeline follows a 3-step mechanism.
 
 ![pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
 
-## Structure 
+## Code Structure 
 - run.py
 - utils/
   - utils_vision_data.py
@@ -28,8 +28,7 @@ The overall multimodal pipeline follows a 3-step mechanism.
   - models.py	
   - plot.py	
 
-## Update 
-**How to use ?**
+## How to use ?
 - scripts: The python file to run a model and model configs.
   run_hurricast.py and config.py 
 - The command line parser is in src/setup.py
@@ -44,7 +43,6 @@ The entire code base is wrapped up in src.
   >>> print(in_loss.keys(), in_model.keys())
   "trg_y", "x_viz", "x_stat" 
   ```
-  - 3. TODO: Add Reweighted sampling
 
 All the files work upon choosing a "mode". Depending on the 
 mode, the variables will be different, as well as the layer of our model.
