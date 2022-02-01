@@ -13,7 +13,10 @@ Furthermore, the inclusion of Hurricast into an operational forecast consensus m
 
 ## Hurricast Methodology
 
-The overall multimodal pipeline follows a 3-step mechanism. During Step 1, we extract embeddings from the reanalysis maps using encoder-decoder architectures to obtain a one-dimensional representation. During Step 2, we concatenate the statistical data with the features extracted from the reanalysis maps. During Step 3, we train one XGBoost model for each of the prediction tasks: intensity in 24 h, latitude displacement in 24 h, and longitude displacement in 24 h.
+The overall multimodal pipeline follows a 3-step mechanism. 
+- During Step 1, we extract embeddings from the reanalysis maps using encoder-decoder architectures to obtain a one-dimensional representation. 
+- During Step 2, we concatenate the statistical data with the features extracted from the reanalysis maps. 
+- During Step 3, we train one XGBoost model for each of the prediction tasks: intensity in 24 h, latitude displacement in 24 h, and longitude displacement in 24 h.
 
 ![pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
 
