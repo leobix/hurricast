@@ -5,10 +5,11 @@ Hurricast is a novel machine learning (ML) framework for tropical cyclone intens
 We evaluate our models in the North Atlantic and Eastern Pacific basins on 2016-2019 for 24-hour lead time track and intensity forecasts and show they achieve comparable mean average error and skill to current operational forecast models while computing in seconds.
 Furthermore, the inclusion of Hurricast into an operational forecast consensus model could improve over the National Hurricane Center's official forecast, thus highlighting the complementary properties with existing approaches. In summary, our work demonstrates that utilizing machine learning techniques to combine different data sources can lead to new opportunities in tropical cyclone forecasting.
 
-The overall pipeline follows this 3-step mechanism.
+## Hurricast Methodology
+
+The overall multimodal pipeline follows a 3-step mechanism. During Step 1, we extract embeddings from the reanalysis maps using encoder-decoder architectures to obtain a one-dimensional representation. During Step 2, we concatenate the statistical data with the features extracted from the reanalysis maps. During Step 3, we train one XGBoost model for each of the prediction tasks: intensity in 24 h, latitude displacement in 24 h, and longitude displacement in 24 h.
 
 ![pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
-
 
 ## Structure 
 - run.py
