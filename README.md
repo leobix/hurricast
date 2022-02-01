@@ -1,7 +1,7 @@
 # Hurricast - Hurricane Forecasting with Deep Learning
 
 This repository holds the code corresponding to the paper:
-Hurricane Forecasting: A Novel Multimodal Machine Learning Framework
+**Hurricane Forecasting: A Novel Multimodal Machine Learning Framework**
 https://arxiv.org/abs/2011.06125
 by Léonard Boussioux, Cynthia Zeng, Théo Guénais, Dimitris Bertsimas.
 
