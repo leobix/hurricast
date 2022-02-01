@@ -20,6 +20,27 @@ The overall multimodal pipeline follows a 3-step mechanism.
 
 ![pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
 
+## Encoder - Decoder Architectures
+
+To perform feature extraction, we experimented with encoder-decoder architectures. 
+
+- The encoder component consists of a Convolutional Neural Network (CNN). 
+
+- We provide two decoder variations:
+    - The first one relies on Recurrent Neural Networks (RNNs), a well-suited architecture to model temporal dynamic behavior in sequential data. We support RNN, LSTM, and GRU.
+    - The second one uses Transformers, a state-of-the-art architecture for sequential data. While the GRU model the temporal aspect through a recurrence mechanism, the Transformers utilize attention mechanisms and positional encoding to model long-range dependencies.
+
+To perform feature extraction from a given input sequence of reanalysis maps and statistical data, we pass them through the whole frozen encoder-decoder, except the last fully-connected layer(s).
+
+Here is an example of the CNN-encoder GRU-decoder architecture we used:
+![cnngru2.pdf](https://github.com/leobix/hurricast/files/7980224/cnngru2.pdf)
+
+At each time step, we utilize the CNN to produce a one-dimensional representation of the reanalysis maps. Then, we concatenate these embeddings with the corresponding statistical features to create a sequence of inputs fed sequentially to the GRU. At each time step, the GRU outputs a hidden state passed to the next time step. Finally, we concatenate all the successive hidden states and pass them through three fully connected layers to predict intensity or track with a 24-hour lead time. We finally extract our spatial-temporal embeddings as the output of the second fully connected layer.
+
+Here is an example of the CNN-encoder Transformer-decoder architecture we used:
+![cnntransformer.pdf](https://github.com/leobix/hurricast/files/7980228/cnntransformer.pdf)
+
+
 ## Code Structure 
 - run.py
 - utils/
