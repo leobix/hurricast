@@ -56,7 +56,7 @@ Here is an example of the CNN-encoder Transformer-decoder architecture we used:
 
 The entire code base is wrapped up in src. 
 - prepro.py :
-  - 1. $\rightarrow$ Class to process the data
+  - 1. Class to process the data
   - 2. Add a collate function that allows to batch the data using dictionary. Together with a dataloader\
   the command ```next(iter(loader))``` will output a dictionary. 
   ```py
