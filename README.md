@@ -42,12 +42,16 @@ Here is an example of the CNN-encoder Transformer-decoder architecture we used:
 
 
 ## Code Structure 
-- run.py
-- utils/
-  - utils_vision_data.py
-  - data_processing.py	
-  - models.py	
-  - plot.py	
+
+We bring your attention to a few particular files:
+
+- ```src```: holds the core of the code, in particular:
+    - ```run.py```: 
+    - ```setup.py```: command line parser with all arguments
+    - utils/
+      - utils_vision_data.py
+      - data_processing.py	
+      - models.py	
 
 ## How to use ?
 - scripts: The python file to run a model and model configs.
@@ -130,4 +134,4 @@ python run_hurricast.py\
 ```
 
 ## Data:
-- The data is very large (>30Gb): we are looking for a solution to host it.
+- The vision data is very large (>30Gb): we are looking for a solution to host it.
