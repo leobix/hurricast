@@ -13,7 +13,7 @@ Furthermore, the inclusion of Hurricast into an operational forecast consensus m
 
 ## Hurricast Methodology
 
-The overall multimodal pipeline follows a 3-step mechanism. 
+The overall multimodal pipeline follows a **3-step mechanism**. 
 - During Step 1, we extract embeddings from the reanalysis maps using encoder-decoder architectures to obtain a one-dimensional representation. 
 - During Step 2, we concatenate the statistical data with the features extracted from the reanalysis maps. 
 - During Step 3, we train one XGBoost model for each of the prediction tasks: intensity in 24 h, latitude displacement in 24 h, and longitude displacement in 24 h.
@@ -22,13 +22,13 @@ The overall multimodal pipeline follows a 3-step mechanism.
 
 ## Encoder - Decoder Architectures
 
-To perform feature extraction, we experimented with encoder-decoder architectures. 
+To perform feature extraction, we experimented with encoder-decoder architectures under a **supervised learning** mechanism. 
 
 - The encoder component consists of a Convolutional Neural Network (CNN). 
 
 - We provide two decoder variations:
-    - The first one relies on Recurrent Neural Networks (RNNs), a well-suited architecture to model temporal dynamic behavior in sequential data. We support RNN, LSTM, and GRU.
-    - The second one uses Transformers, a state-of-the-art architecture for sequential data. While the GRU model the temporal aspect through a recurrence mechanism, the Transformers utilize attention mechanisms and positional encoding to model long-range dependencies.
+    - The first one relies on Recurrent Neural Networks (RNNs). We support RNN, LSTM, and GRU.
+    - The second one uses Transformers. While the GRU model the temporal aspect through a recurrence mechanism, the Transformers utilize attention mechanisms and positional encoding to model long-range dependencies.
 
 To perform feature extraction from a given input sequence of reanalysis maps and statistical data, we pass them through the whole frozen encoder-decoder, except the last fully-connected layer(s).
 
