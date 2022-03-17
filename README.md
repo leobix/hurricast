@@ -3,7 +3,7 @@
 This repository holds the code corresponding to the paper:
 **Hurricane Forecasting: A Novel Multimodal Machine Learning Framework**
 https://arxiv.org/abs/2011.06125
-by Léonard Boussioux, Cynthia Zeng, Théo Guénais, Dimitris Bertsimas.
+by Léonard Boussioux, Cynthia Zeng, Théo Guénais, Dimitris Bertsimas, accepted for publication at Weather and Forecasting.
 
 Hurricast is a novel machine learning (ML) framework for tropical cyclone intensity and track forecasting, combining multiple ML techniques and utilizing diverse data sources. Our multimodal framework efficiently combines spatial-temporal data with statistical data by extracting features with deep-learning encoder-decoder architectures and predicting with gradient-boosted trees.
 
