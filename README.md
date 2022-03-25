@@ -56,11 +56,11 @@ We bring your attention to a few particular files and folders:
 
 ## How to use ?
 - scripts: The python file to run a model and model configs.
-  run_hurricast.py and config.py 
-- The command line parser is in src/setup.py
+  ```run_hurricast.py``` and ```config.py```
+- The command line parser is in ```src/setup.py```
 
 The entire code base is wrapped up in src. 
-- prepro.py :
+- ```prepro.py``` :
   - 1. Class to process the data
   - 2. Add a collate function that allows to batch the data using dictionary. Together with a dataloader\
   the command ```next(iter(loader))``` will output a dictionary. 
