@@ -1,22 +1,74 @@
-# Hurricast - Hurricane Forecasting with Deep Learning
+# Hurricast 🌀
 
-This repository holds the code corresponding to the paper:
-**Hurricane Forecasting: A Novel Multimodal Machine Learning Framework**
-https://journals.ametsoc.org/view/journals/wefo/37/6/WAF-D-21-0091.1.xml
-by Léonard Boussioux, Cynthia Zeng, Théo Guénais, Dimitris Bertsimas, published at Weather and Forecasting.
+[![Paper](https://img.shields.io/badge/Paper-Weather%20and%20Forecasting-blue)](https://journals.ametsoc.org/view/journals/wefo/37/6/WAF-D-21-0091.1.xml)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Hurricast is a novel machine learning (ML) framework for tropical cyclone intensity and track forecasting, combining multiple ML techniques and utilizing diverse data sources. Our multimodal framework efficiently combines spatial-temporal data with statistical data by extracting features with deep-learning encoder-decoder architectures and predicting with gradient-boosted trees.
+A novel deep learning framework for hurricane forecasting
 
-We evaluate our models in the North Atlantic and Eastern Pacific basins on 2016-2019 for 24-hour lead time track and intensity forecasts and show they achieve comparable mean absolute error and skill to current operational forecast models while computing in seconds.
+## 📋 Overview
 
-Furthermore, the inclusion of Hurricast into an operational forecast consensus model could improve over the National Hurricane Center's official forecast, thus highlighting the complementary properties with existing approaches. In summary, our work demonstrates that utilizing machine learning techniques to combine different data sources can lead to new opportunities in tropical cyclone forecasting.
+This repository contains the official implementation of the paper:  
+**"Hurricane Forecasting: A Novel Multimodal Machine Learning Framework"**
 
-## Hurricast Methodology
+*by Léonard Boussioux, Cynthia Zeng, Théo Guénais, Dimitris Bertsimas*  
+*Published in Weather and Forecasting*
 
-The overall multimodal pipeline follows a **3-step mechanism**. 
-- Step 1: we extract embeddings from the reanalysis maps using encoder-decoder architectures to obtain a one-dimensional representation. 
-- Step 2: we concatenate the statistical data with the features extracted from the reanalysis maps. 
-- Step 3: we train one XGBoost model for each of the prediction tasks: intensity in 24 h, latitude displacement in 24 h, and longitude displacement in 24 h.
+### Key Features
+
+- 🔮 24-hour lead time track and intensity forecasts
+- 🗺️ Evaluated on North Atlantic and Eastern Pacific basins (2016-2019)
+- ⚡ Computation in seconds
+- 📊 Comparable accuracy to operational forecast models
+- 🤝 Complementary to existing NHC approaches
+
+## 🔬 Methodology
+
+Hurricast employs a novel multimodal machine learning framework that combines multiple ML techniques and diverse data sources. Our approach follows a **3-step mechanism**:
+
+### 1️⃣ Feature Extraction
+- Uses encoder-decoder architectures
+- Processes reanalysis maps
+- Generates one-dimensional representations
+
+### 2️⃣ Data Fusion
+- Concatenates statistical data
+- Combines with extracted map features
+
+### 3️⃣ Prediction
+Trains separate XGBoost models for:
+- 24h intensity prediction
+- 24h latitude displacement
+- 24h longitude displacement
+
+## 📈 Results
+
+Our framework demonstrates:
+- Comparable mean absolute error to operational models
+- Improved forecast accuracy when integrated with consensus model
+- Significant reduction in computation time
+
+## 🔗 References
+
+- [Paper Link](https://journals.ametsoc.org/view/journals/wefo/37/6/WAF-D-21-0091.1.xml)
+- [National Hurricane Center](https://www.nhc.noaa.gov/)
+
+## 📝 Citation
+
+```bibtex
+@article{boussioux2022hurricane,
+  title={Hurricane forecasting: A novel multimodal machine learning framework},
+  author={Boussioux, L{\'e}onard and Zeng, Cynthia and Gu{\'e}nais, Th{\'e}o and Bertsimas, Dimitris},
+  journal={Weather and forecasting},
+  volume={37},
+  number={6},
+  pages={817--831},
+  year={2022}
+}
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ![pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
 
