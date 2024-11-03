@@ -68,7 +68,7 @@ Our framework demonstrates:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ![pipeline.pdf](https://github.com/leobix/hurricast/files/7980070/pipeline.pdf)
 
