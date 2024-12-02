@@ -50,7 +50,6 @@ Our framework demonstrates:
 ## 🔗 References
 
 - [Paper Link](https://journals.ametsoc.org/view/journals/wefo/37/6/WAF-D-21-0091.1.xml)
-- [National Hurricane Center](https://www.nhc.noaa.gov/)
 
 ## 📝 Citation
 
