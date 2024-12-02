@@ -186,4 +186,4 @@ python run_hurricast.py\
 ```
 
 ## Data:
-- The vision data is very large (>30Gb): we are looking for a solution to host it.
+- The vision data is very large (>30Gb): we currently don't host it online.
